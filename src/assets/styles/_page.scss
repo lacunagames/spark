@@ -1,0 +1,245 @@
+@font-face {
+  font-family: 'Alegreya';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Alegreya Regular'), local('Alegreya-Regular'),
+    url(../fonts/Alegreya-Regular.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Roboto Condensed';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Roboto Condensed'), local('RobotoCondensed-Regular'),
+    url(../fonts/RobotoCondensed-Regular.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+* {
+  box-sizing: border-box;
+
+  &::selection {
+    background: $cSecondary;
+  }
+}
+
+html,
+body,
+.app-container,
+.app-container,
+.screen {
+  height: 100%;
+}
+
+body {
+  color: $cText;
+  background: lighten($cBg, 5%);
+  font-size: 14px;
+  line-height: 21px;
+  font-family: $font;
+  font-weight: 300;
+  overflow: hidden;
+}
+
+.screen {
+  overflow: hidden;
+  min-width: map-get($mediaSizes, xs);
+  min-width: 640px;
+  min-height: 480px;
+}
+
+.content {
+  padding: 0 $spacing;
+}
+
+strong,
+.strong {
+  font-weight: 700;
+}
+
+.small {
+  font-size: 12px;
+  color: $cTextLight;
+}
+
+h1,
+h2,
+h3,
+h4,
+.h1,
+.h2,
+.h3,
+.h4 {
+  color: $cText;
+  font-family: $fontHeading;
+  font-weight: 400;
+  margin: 0;
+  text-transform: capitalize;
+}
+
+h1,
+.h1 {
+  font-size: 40px;
+  line-height: 40px;
+  margin-bottom: 30px;
+  padding-top: 30px;
+}
+
+h2,
+.h2 {
+  font-size: 30px;
+  line-height: 30px;
+  margin-bottom: 30px;
+  padding-top: 15px;
+}
+
+h3,
+.h3 {
+  font-size: 20px;
+  line-height: 20px;
+  margin-bottom: 20px;
+  padding-top: 15px;
+}
+
+h4,
+.h4 {
+  font-size: 16px;
+  line-height: 16px;
+  margin-bottom: 15px;
+  padding-top: 15px;
+}
+
+p {
+  margin-bottom: $spacing;
+}
+
+a {
+  color: $cLink;
+  text-decoration: none;
+
+  &:hover,
+  &:focus {
+    color: $cLinkHover;
+    outline: none;
+    text-decoration: underline;
+  }
+
+  .tab-active &:focus {
+    outline: 2px solid $cTab;
+    text-decoration: none;
+  }
+}
+
+button,
+input[type='button'],
+input[type='submit'],
+.button {
+  height: 40px;
+  display: inline-block;
+  padding: 10px 13px;
+  margin: 2px 5px 5px 2px;
+  font-family: $fontHeading;
+  font-size: 18px;
+  color: $cText;
+  background: $cSecondary;
+  border: none;
+  line-height: 18px;
+  text-transform: capitalize;
+  border-radius: 1px;
+  transition: background $animFast, box-shadow $animFast, color $animFast;
+  cursor: pointer;
+  outline: none;
+  box-shadow: $shadow1;
+
+  &:disabled,
+  &.disabled,
+  &:disabled:hover,
+  &.disabled:hover {
+    background: lighten($cSecondary, 15%);
+    color: rgba($cText, 0.4);
+    cursor: default;
+    box-shadow: none;
+  }
+
+  &:hover,
+  &:focus {
+    background: lighten($cSecondary, 10%);
+    outline: none;
+    color: $cText;
+    text-decoration: none;
+    box-shadow: $shadow2;
+  }
+
+  .tab-active &:focus {
+    outline: none;
+    border: 2px solid $cTab;
+    margin: 0 3px 3px 0;
+    height: 44px;
+  }
+
+  &.primary {
+    background: $cPrimary;
+
+    &:disabled,
+    &.disabled,
+    &:disabled:hover,
+    &.disabled:hover {
+      background: lighten($cPrimary, 15%);
+    }
+
+    &:hover,
+    &:focus {
+      background: lighten($cPrimary, 10%);
+    }
+  }
+
+  &.error {
+    background: $cError;
+    color: #fff;
+
+    &:hover,
+    &:focus {
+      background: lighten($cError, 10%);
+      color: #fff;
+    }
+  }
+
+  &.button-small {
+    padding: 3px 10px;
+    font-size: 14px;
+  }
+
+  i {
+    vertical-align: middle;
+    line-height: 16px;
+    margin: -2px 3px 0 0;
+  }
+
+  &.icon,
+  &.icon-raised {
+    padding: 10px 4px 10px;
+
+    i {
+      margin-right: 0;
+      font-size: 30px;
+    }
+  }
+
+  &.icon {
+    background: transparent;
+    color: $cText;
+    box-shadow: none;
+
+    &:hover,
+    &:focus {
+      background: lighten($cSecondary, 15%);
+      color: lighten($cText, 10%);
+      box-shadow: none;
+    }
+  }
+}

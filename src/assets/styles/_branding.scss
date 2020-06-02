@@ -1,0 +1,45 @@
+$cError: #e00025;
+$cSuccess: #4c7732;
+$cSuccessBg: #43b200;
+$cBg: #c1b677;
+$cBgInverse: #211b00;
+$cActive: #cece5e;
+$cDisabled: #c2baa3;
+$cText: #383105;
+$cTextLight: lighten($cText, 20%);
+$cLink: #245eff;
+$cLinkHover: darken($cLink, 20%);
+$cPrimary: #92ff85;
+$cSecondary: #cecbb2;
+$cTab: darken($cLink, 20%);
+
+// Fonts
+$font: 'Roboto Condensed', sans-serif;
+$fontHeading: 'Alegreya', serif;
+$fontIcon: 'Material Icons';
+
+// Shadows
+$shadow0: 0 2px 1px -1px rgba(0, 0, 0, 0.12);
+$shadow1: 0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 1px 0 rgba(0, 0, 0, 0.14),
+  0 2px 1px -1px rgba(0, 0, 0, 0.12);
+$shadow1rotate: 0.5px 0.5px 3px 0 rgba(0, 0, 0, 0.2),
+  0.5px 0.5px 1px 0 rgba(0, 0, 0, 0.14), 1px 1.5px 1px -1px rgba(0, 0, 0, 0.12);
+$shadow1In: 0 1px 2px 0px rgba(0, 0, 0, 0.11) inset;
+$shadow2: 0 1px 5px 0 rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14),
+  0 3px 1px -2px rgba(0, 0, 0, 0.12);
+$shadow2rotate: 0.5px 0.5px 5px 0 rgba(0, 0, 0, 0.2),
+  1px 1px 2px 0 rgba(0, 0, 0, 0.14), 1.5px 2px 1px -2px rgba(0, 0, 0, 0.12);
+$shadow3: 0 1px 8px 0 rgba(0, 0, 0, 0.2), 0 3px 4px 0 rgba(0, 0, 0, 0.14),
+  0 3px 3px -2px rgba(0, 0, 0, 0.12);
+$shadow3rotate: 0.5px 0.5px 8px 0 rgba(0, 0, 0, 0.2),
+  1.5px 2px 4px 0 rgba(0, 0, 0, 0.14), 1.5px 2px 3px -2px rgba(0, 0, 0, 0.12);
+$shadow5: 0 3px 5px -1px rgba(0, 0, 0, 0.2), 0 5px 8px 0 rgba(0, 0, 0, 0.14),
+  0 1px 14px 0 rgba(0, 0, 0, 0.12);
+$shadowText: 1px 1px 2px rgba(0, 0, 0, 0.2);
+
+// Spacing
+$spacing: 15px;
+$spacingLg: 30px;
+
+// Transitions
+$animFast: 0.2s ease-out;

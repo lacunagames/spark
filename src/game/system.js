@@ -23,6 +23,14 @@ const messageTypes = {
     type: 'error',
     msg: () => `Not enough skill points.`,
   },
+  notEnoughMana: {
+    type: 'error',
+    msg: () => `Not enough mana.`,
+  },
+  noRaceSelected: {
+    type: 'error',
+    msg: () => `No race selected.`,
+  },
 };
 
 class System extends StateHandler {
@@ -43,8 +51,11 @@ class System extends StateHandler {
 
     newMessage.text = newMessage.msg(args);
     newMessage.duration = newMessage.duration || 3;
-    if (isErr && this.state.errorMessage)
+    if (isErr && this.state.errorMessage) {
       this.clearMessage(this.state.errorMessage.id);
+    } else if (!isErr && this.state.messages.length > 2) {
+      this.clearMessage(this.state.messages[0].id);
+    }
     newMessage.timer = setTimeout(
       () => this.clearMessage(newMessage.id),
       newMessage.duration * 1000

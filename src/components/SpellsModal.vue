@@ -20,21 +20,21 @@
         >
           <a href="#" @click.prevent="selectSpell(spell.id)">
             <span class="icon" :class="`icon-${spell.icon || spell.id}`"></span>
-            <span class="name">{{ spell.name }}</span>
+            <span class="title">{{ spell.title }}</span>
           </a>
         </li>
       </ul>
       <div class="spell-details" v-if="selectedSpell">
         <h2>
           <span :class="`icon icon-${ selectedSpell.icon || selectedSpell.id }`"></span>
-          <span class="text">{{ selectedSpell.name }}</span>
+          <span class="text">{{ selectedSpell.title }}</span>
         </h2>
         <p class="spell-desc">{{ selectedSpell.desc }}</p>
         <div class="civ-checks">
           <label v-for="civ in civList" :key="civ.id">
             <input type="checkbox" :value="civ.id" v-model="selectedCivs" />
             <span :class="`icon icon-${civ.id}`"></span>
-            <span class="name">{{ civ.name }}</span>
+            <span class="title">{{ civ.title }}</span>
           </label>
         </div>
         <p>Mana cost: {{ selectedSpell.mana * selectedCivs.length }}</p>
@@ -198,7 +198,7 @@ export default {
       background-size: cover;
       margin-right: 15px;
     }
-    .name {
+    .title {
       position: relative;
       bottom: 15px;
       text-transform: capitalize;
@@ -254,7 +254,7 @@ export default {
       border: 3px solid #ccc;
       border-radius: 50px;
     }
-    .name {
+    .title {
       position: absolute;
       bottom: -20px;
       left: 0;
@@ -266,7 +266,7 @@ export default {
       border-color: #1a821f;
     }
 
-    input:checked + .icon + .name {
+    input:checked + .icon + .title {
       color: #1a821f;
     }
   }

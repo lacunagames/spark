@@ -35,7 +35,7 @@
       <a href="#" v-on="hoverHandle(civ.id)">
         <div class="title">
           <span>{{ civ.level }}</span>
-          {{ civ.name }}
+          {{ civ.title }}
         </div>
         <span class="population" :class="`icon-${civ.id}`">
           <span

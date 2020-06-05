@@ -56,7 +56,8 @@ const positions = {
 const defaultState = {
   discs: [],
   positions,
-  turn: 1,
+  turn: 0,
+  log: [{ id: 0, items: [] }],
 };
 
 class World extends StateHandler {
@@ -72,7 +73,11 @@ class World extends StateHandler {
   initWorld() {}
 
   nextTurn() {
-    this.setState({ turn: this.state.turn + 1 });
+    this.setState({
+      turn: this.state.turn + 1,
+      log: [...this.state.log, { id: this.state.turn + 1, items: [] }],
+    });
+
     this.civs.civTurn();
     this.spark.sparkTurn();
     if (this.state.turn === 7) {
@@ -80,6 +85,11 @@ class World extends StateHandler {
         'tiger',
         this.civs.state.civList.map(civ => civ.id)
       );
+      this.logEvent({
+        type: 'dangerAppeared',
+        disc: 'tiger',
+        civs: this.civs.state.civList.map(civ => civ.id),
+      });
     }
   }
 
@@ -126,15 +136,13 @@ class World extends StateHandler {
 
   removeDisc(discId) {
     const disc = this.state.discs.find(disc => disc.id === discId);
-    this.clearIndex(disc.type, disc.index);
-    this._removeStateObj('discs', disc.id);
+
     this.civs.state.civList.forEach(
       civ =>
-        civ.connect.includes(discId) &&
-        this.civs._updateStateObj('civList', civ.id, {
-          connect: civ.connect.filter(conn => conn !== discId),
-        })
+        civ.connect.includes(discId) && this.civs.disconnectDisc(civ.id, discId)
     );
+    this.clearIndex(disc.type, disc.index);
+    this._removeStateObj('discs', disc.id);
   }
 
   checkDiscRemove() {
@@ -146,6 +154,70 @@ class World extends StateHandler {
       if (!isConnected) {
         this.removeDisc(disc.id);
       }
+    });
+  }
+
+  logEvent({ type, ...args }) {
+    const getDynamic = (type, { disc, civ, civs, level }) => {
+      const discTitle = this.state.discs.find(discFind => discFind.id === disc)
+        ?.title;
+      const civsTitle =
+        civs &&
+        this.civs.state.civList
+          .filter(civ => civs.includes(civ.id))
+          .map(civ => civ.title)
+          .join(', ');
+      const civTitle = this.civs.state.civList.find(
+        civFind => civFind.id === civ
+      )?.title;
+
+      switch (type) {
+        case 'dangerAppeared':
+          return {
+            text: `${discTitle} appeared for ${civsTitle}.`,
+            icon: disc,
+          };
+        case 'civLevelUp':
+          return {
+            text: `${civTitle} reached level ${level}.`,
+            icon: civ,
+          };
+        case 'civAction':
+          return {
+            text: `${civTitle} have connected to ${discTitle}.`,
+            icon: disc,
+          };
+        case 'civDied':
+          return {
+            text: `${civTitle} went extinct.`,
+            icon: civ,
+          };
+        case 'sparkSpell':
+          return {
+            text: `You created ${discTitle} for ${civsTitle}}.`,
+            icon: disc,
+          };
+        case 'sparkLevelUp':
+          return {
+            text: `You reached level ${level}.`,
+            icon: 'levelup',
+          };
+        default:
+          return {
+            text: `${type} has no text yet`,
+            icon: undefined,
+          };
+      }
+    };
+    this._updateStateObj('log', this.state.turn, {
+      items: [
+        ...this.state.log[this.state.log.length - 1].items,
+        {
+          type,
+          ...args,
+          ...getDynamic(type, args),
+        },
+      ],
     });
   }
 }

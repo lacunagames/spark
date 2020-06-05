@@ -1,7 +1,7 @@
 const spells = [
   {
     id: 'wildfire',
-    name: 'Wildfire',
+    title: 'Wildfire',
     skill: 'fire',
     category: 'fire',
     mana: 10,
@@ -9,7 +9,7 @@ const spells = [
   },
   {
     id: 'burning-shield',
-    name: 'Burning shield',
+    title: 'Burning shield',
     skill: 'fire',
     category: 'fire',
     mana: 10,
@@ -17,7 +17,7 @@ const spells = [
   },
   {
     id: 'flame-familiar',
-    name: 'Flame familiar',
+    title: 'Flame familiar',
     skill: 'fire',
     category: 'fire',
     mana: 10,
@@ -25,7 +25,7 @@ const spells = [
   },
   {
     id: 'lightning-strike',
-    name: 'Lightning strike',
+    title: 'Lightning strike',
     skill: 'air',
     category: 'air',
     mana: 10,
@@ -33,7 +33,7 @@ const spells = [
   },
   {
     id: 'force-shield',
-    name: 'Force shield',
+    title: 'Force shield',
     skill: 'air',
     category: 'air',
     mana: 10,
@@ -41,7 +41,7 @@ const spells = [
   },
   {
     id: 'summon-whisperer',
-    name: 'Summon  whisperer',
+    title: 'Summon  whisperer',
     skill: 'air',
     category: 'air',
     mana: 10,
@@ -49,7 +49,7 @@ const spells = [
   },
   {
     id: 'storm',
-    name: 'Storm',
+    title: 'Storm',
     skill: 'water',
     category: 'water',
     mana: 10,
@@ -57,7 +57,7 @@ const spells = [
   },
   {
     id: 'water-shield',
-    name: 'Water shield',
+    title: 'Water shield',
     skill: 'water',
     category: 'water',
     mana: 10,
@@ -65,7 +65,7 @@ const spells = [
   },
   {
     id: 'stream-spirit',
-    name: 'Stream spirit',
+    title: 'Stream spirit',
     skill: 'water',
     category: 'water',
     mana: 10,
@@ -73,7 +73,7 @@ const spells = [
   },
   {
     id: 'earth-shield',
-    name: 'Earth shield',
+    title: 'Earth shield',
     skill: 'earth',
     category: 'earth',
     mana: 10,
@@ -81,7 +81,7 @@ const spells = [
   },
   {
     id: 'mud-golem',
-    name: 'Mud golem',
+    title: 'Mud golem',
     skill: 'earth',
     category: 'earth',
     mana: 10,

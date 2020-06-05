@@ -10,7 +10,7 @@ const defaultState = {
   xpToLevel: 12,
   xp: 0,
   mana: 0,
-  maxMana: 12,
+  maxMana: 10,
   manaPerTurn: 3,
   manaCharges: 0,
   spells: [],
@@ -42,6 +42,10 @@ class Spark extends StateHandler {
         skillPoints: this.state.skillPoints + 1,
         xpToLevel: this.state.xpToLevel + 1,
       });
+      this.world.logEvent({
+        type: 'sparkLevelUp',
+        level: this.state.level,
+      });
     }
   }
 
@@ -49,13 +53,20 @@ class Spark extends StateHandler {
     const spell = this.state.spells.find(spell => spell.id === spellId);
     const createDiscId = spell.createDisc || spell.id;
 
-    if (civs.length === 0) return false;
-    if (this.state.mana < spell.mana * civs.length) return false;
+    if (civs.length === 0) {
+      this.system.showMessage({ type: 'noRaceSelected' });
+      return false;
+    }
+    if (this.state.mana < spell.mana * civs.length) {
+      this.system.showMessage({ type: 'notEnoughMana' });
+      return false;
+    }
     if (this.world.state.discs.find(disc => disc.id === createDiscId))
       return false;
 
     this.setState({ mana: this.state.mana - spell.mana });
     this.world.createDisc(createDiscId, civs);
+    this.world.logEvent({ type: 'sparkSpell', disc: createDiscId, civs });
     return true;
   }
 

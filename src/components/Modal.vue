@@ -139,16 +139,9 @@ export default {
   }
 
   .close {
-    background: none;
-    box-shadow: none;
     position: absolute;
     right: 5px;
     top: 5px;
-    margin: 0;
-
-    &:hover {
-      background: #fffcec;
-    }
   }
 }
 

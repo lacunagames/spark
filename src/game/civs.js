@@ -1,9 +1,10 @@
 import StateHandler from './statehandler';
+import allDiscs from './data/discs';
 
 const allCivs = [
   {
     id: 'trolls',
-    name: 'Trolls',
+    title: 'Trolls',
     level: 1,
     population: 100,
     maxPopulation: 140,
@@ -12,16 +13,11 @@ const allCivs = [
     xpLevelGrow: 2,
     biomes: ['jungle', 'desert', 'swamp'],
     govs: ['tribal'],
-    actionDiscs: [
-      { id: 'hunting', level: 1 },
-      { id: 'fishing', level: 1 },
-      { id: 'gathering', level: 1 },
-      { id: 'town', level: 2 },
-    ],
+    actionDiscs: ['hunting', 'fishing', 'gathering', 'town'],
   },
   {
     id: 'humans',
-    name: 'Humans',
+    title: 'Humans',
     level: 1,
     population: 100,
     maxPopulation: 120,
@@ -30,17 +26,11 @@ const allCivs = [
     xpLevelGrow: 2,
     biomes: ['grassland', 'jungle', 'mountain'],
     govs: ['tribal', 'oligarchy'],
-    actionDiscs: [
-      { id: 'digging', level: 1 },
-      { id: 'fishing', level: 1 },
-      { id: 'gathering', level: 1 },
-      { id: 'town', level: 2 },
-      { id: 'mining', level: 2 },
-    ],
+    actionDiscs: ['digging', 'fishing', 'gathering', 'town', 'mining'],
   },
   {
     id: 'dwarves',
-    name: 'Dwarves',
+    title: 'Dwarves',
     level: 1,
     population: 100,
     maxPopulation: 100,
@@ -49,17 +39,11 @@ const allCivs = [
     xpLevelGrow: 3,
     biomes: ['grassland', 'mountain'],
     govs: ['tribal', 'oligarchy'],
-    actionDiscs: [
-      { id: 'hunting', level: 1 },
-      { id: 'fishing', level: 1 },
-      { id: 'digging', level: 1 },
-      { id: 'town', level: 2 },
-      { id: 'mining', level: 2 },
-    ],
+    actionDiscs: ['digging', 'fishing', 'hunting', 'town', 'mining'],
   },
   {
     id: 'gnomes',
-    name: 'Gnomes',
+    title: 'Gnomes',
     level: 1,
     population: 100,
     maxPopulation: 120,
@@ -68,17 +52,11 @@ const allCivs = [
     xpLevelGrow: 4,
     biomes: ['mountain', 'swamp', 'forest'],
     govs: ['oligarchy'],
-    actionDiscs: [
-      { id: 'digging', level: 1 },
-      { id: 'fishing', level: 1 },
-      { id: 'gathering', level: 1 },
-      { id: 'town', level: 2 },
-      { id: 'mining', level: 2 },
-    ],
+    actionDiscs: ['digging', 'fishing', 'gathering', 'town', 'mining'],
   },
   {
     id: 'elves',
-    name: 'Elves',
+    title: 'Elves',
     level: 1,
     population: 100,
     maxPopulation: 100,
@@ -87,16 +65,11 @@ const allCivs = [
     xpLevelGrow: 4,
     biomes: ['swamp', 'forest'],
     govs: ['oligarchy'],
-    actionDiscs: [
-      { id: 'hunting', level: 1 },
-      { id: 'fishing', level: 1 },
-      { id: 'gathering', level: 1 },
-      { id: 'town', level: 2 },
-    ],
+    actionDiscs: ['hunting', 'fishing', 'gathering', 'town'],
   },
   {
     id: 'orcs',
-    name: 'Orcs',
+    title: 'Orcs',
     level: 1,
     population: 100,
     maxPopulation: 140,
@@ -105,13 +78,7 @@ const allCivs = [
     xpLevelGrow: 2,
     biomes: ['grassland', 'forest', 'desert'],
     govs: ['tribal', 'oligarchy'],
-    actionDiscs: [
-      { id: 'hunting', level: 1 },
-      { id: 'digging', level: 1 },
-      { id: 'gathering', level: 1 },
-      { id: 'town', level: 2 },
-      { id: 'mining', level: 2 },
-    ],
+    actionDiscs: ['hunting', 'digging', 'gathering', 'town', 'mining'],
   },
 ];
 
@@ -149,7 +116,7 @@ class Civs extends StateHandler {
             ...civ,
             xp: 0,
             action: 1,
-            actionGrow: 0,
+            maxAction: 1,
             index: this.useIndex('civList'),
             connect: [],
           },
@@ -171,12 +138,7 @@ class Civs extends StateHandler {
 
   civTurn() {
     this.state.civList.forEach(civ => {
-      let popGrow = 0;
-      let xpGrow = 0;
-      let actionGrow = 0;
-      let keepup = [];
-      let newConnect = [...civ.connect];
-      let removeBoost = { maxPop: 0 };
+      let grow = { pop: 0, xp: 0, action: 0 };
 
       civ.connect.forEach(discId => {
         const disc = this.world.state.discs.find(disc => disc.id === discId);
@@ -192,98 +154,108 @@ class Civs extends StateHandler {
               mod.disc === discId &&
               (!mod.chance || Math.random() < mod.chance)
             ) {
-              multipliers.pop *=
-                mod.popGrowMultiply !== undefined ? mod.popGrowMultiply : 1;
-              multipliers.xp *=
-                mod.xpGrowMultiply !== undefined ? mod.xpGrowMultiply : 1;
-              multipliers.action *=
-                mod.actionGrowMultiply !== undefined
-                  ? mod.actionGrowMultiply
-                  : 1;
+              Object.keys(multipliers).forEach(key => {
+                multipliers[key] *=
+                  mod[`${key}GrowMultiply`] !== undefined
+                    ? mod[`${key}GrowMultiply`]
+                    : 1;
+              });
             }
           });
         });
         if (!disc.chance || Math.random() < disc.chance) {
-          if (disc.popGrow) popGrow += disc.popGrow * multipliers.pop;
-          if (disc.xpGrow) xpGrow += disc.xpGrow * multipliers.xp;
-          if (disc.actionGrow)
-            actionGrow += disc.actionGrow * multipliers.action;
-        }
-
-        if (disc.actionGrow < 0) {
-          keepup.push(disc);
+          Object.keys(grow).forEach(key => {
+            if (disc[`${key}Grow`])
+              grow[key] += disc[`${key}Grow`] * multipliers[key];
+          });
         }
       });
 
-      const isLevelUp = civ.xp + xpGrow >= civ.xpToLevel;
-      const overCapacity = civ.action + actionGrow + civ.actionGrow < 0;
+      const isLevelUp = civ.xp + grow.xp >= civ.xpToLevel;
+      let maxPop = civ.maxPopulation;
 
-      if (overCapacity) {
-        let cutConnect = keepup[Math.floor(Math.random() * keepup.length)];
-
-        newConnect.splice(newConnect.indexOf(cutConnect.id), 1);
-        removeBoost.maxPop = cutConnect.maxPopBoost || 0;
+      if (isLevelUp) {
+        grow.pop += civ.popLevelGrow * (civ.population / civ.maxPopulation);
+        grow.xp -= civ.xpToLevel;
+        maxPop += civ.popLevelGrow;
       }
-      const maxPopulation =
-        civ.maxPopulation +
-        (isLevelUp ? civ.popLevelGrow : 0) -
-        removeBoost.maxPop;
 
       civ = this._updateStateObj('civList', civ.id, {
         level: civ.level + (isLevelUp ? 1 : 0),
-        xp: civ.xp + xpGrow + (isLevelUp ? -civ.xpToLevel : 0),
+        xp: civ.xp + grow.xp,
         xpToLevel: civ.xpToLevel + (isLevelUp ? civ.xpLevelGrow : 0),
-        action: overCapacity ? 0 : civ.action + actionGrow + civ.actionGrow,
-        actionGrow:
-          isLevelUp && civ.level === 1 ? civ.actionGrow + 0.25 : civ.actionGrow,
-        population: Math.min(
-          maxPopulation,
-          civ.population +
-            popGrow +
-            (isLevelUp
-              ? civ.popLevelGrow * (civ.population / civ.maxPopulation)
-              : 0)
-        ),
-        maxPopulation,
-        connect: overCapacity ? newConnect : civ.connect,
+        maxAction: civ.maxActionBoost + (isLevelUp ? 1 : 0),
+        action: civ.action + grow.action,
+        population: Math.min(maxPop, civ.population + grow.pop),
+        maxPopulation: maxPop,
       });
 
+      if (isLevelUp) {
+        this.world.logEvent({
+          type: 'civLevelUp',
+          civ: civ.id,
+          level: civ.level,
+        });
+      }
       if (civ.population <= 0) {
+        this.world.logEvent({ type: 'civDied', civ: civ.id });
         this.clearIndex('civList', civ.index);
         this._removeStateObj('civList', civ.id);
-      } else if (civ.action >= 1) this.civAction(civ);
+      } else if (civ.action >= civ.level) this.civAction(civ);
     });
     this.world.checkDiscRemove();
   }
 
   connectDisc(civId, discId) {
     const civ = this.state.civList.find(civ => civ.id === civId);
+    const disc = this.world.state.discs.find(disc => disc.id === discId);
+    const isBoost = disc.maxPopBoost || disc.maxActionBoost;
+    const boostProps = {
+      maxPopulation: civ.maxPopulation + (disc.maxPopBoost || 0),
+      population:
+        civ.population +
+        (disc.maxPopBoost || 0) * (civ.population / civ.maxPopulation),
+      maxAction: civ.maxAction + (disc.maxActionBoost || 0),
+    };
 
     this._updateStateObj('civList', civId, {
       connect: [...civ.connect, discId],
+      ...(isBoost ? boostProps : {}),
     });
   }
 
   disconnectDisc(civId, discId) {
     const civ = this.state.civList.find(civ => civ.id === civId);
+    const disc = this.world.state.discs.find(disc => disc.id === discId);
+    const isBoost = disc.maxPopBoost || disc.maxActionBoost;
+    const newMaxPop = civ.maxPopulation - (disc.maxPopBoost || 0);
+    const boostProps = {
+      maxPopulation: newMaxPop,
+      population: Math.min(civ.population, newMaxPop),
+      maxAction: civ.maxAction - (disc.maxActionBoost || 0),
+    };
 
     this._updateStateObj('civList', civId, {
       connect: civ.connect.filter(conn => conn !== discId),
+      ...(isBoost ? boostProps : {}),
     });
   }
 
   civAction(civ) {
-    const possibleActions = civ.actionDiscs.filter(
-      action => !civ.connect.includes(action.id) && action.level <= civ.level
-    );
-    const worldAction = this.world.createDisc(
-      possibleActions[Math.floor(Math.random() * possibleActions.length)].id,
-      civ.id
-    );
+    const possibleActions = civ.actionDiscs.filter(action => {
+      const discLevel = allDiscs.find(disc => disc.id === action).level;
+      return !civ.connect.includes(action) && discLevel <= civ.level;
+    });
+    const discId =
+      possibleActions[Math.floor(Math.random() * possibleActions.length)];
 
+    if (!discId) {
+      return console.log(`No action left for ${civ.id}`);
+    }
+    const disc = this.world.createDisc(discId, civ.id);
+    this.world.logEvent({ type: 'civAction', civ: civ.id, disc: discId });
     this._updateStateObj('civList', civ.id, {
-      action: civ.action - 1,
-      maxPopulation: civ.maxPopulation + (worldAction.maxPopBoost || 0),
+      action: civ.action - disc.level,
     });
   }
 }

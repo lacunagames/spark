@@ -10,7 +10,7 @@
           top: world.positions[disc.type][disc.index].top + '%',
         }"
       >
-        <a href="#" :class="`icon-${disc.id}`" :title="disc.name" v-on="hoverHandle(disc.id)"></a>
+        <a href="#" :class="`icon-${disc.id}`" :title="disc.title" v-on="hoverHandle(disc.id)"></a>
       </li>
     </ul>
   </div>

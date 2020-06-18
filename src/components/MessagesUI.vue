@@ -1,19 +1,21 @@
 <template>
   <div>
-    <transition name="log">
-      <div class="log" v-show="showLog">
+    <transition-group name="log" tag="div">
+      <div class="log" :key="turn" v-if="showLog">
         <button type="button" class="close" @click="showLog = false">
           <span class="access">Close modal</span>✕
         </button>
         <h2 class="h3">Turn {{ turn }}</h2>
         <ul>
-          <li v-for="(item, index) in logItems" :key="index">
-            <span v-if="item.icon" class="icon" :class="`icon-${item.icon}`"></span>
-            <span class="text">{{ item.text }}</span>
+          <li v-for="item in logItems" :key="item.index">
+            <a href="#" @click.prevent="$emit('openLink', item)" :class="{ disabled: !item.link }">
+              <span v-if="item.icon" :class="`icon icon-${item.icon}`"></span>
+              {{ item.text }}
+            </a>
           </li>
         </ul>
       </div>
-    </transition>
+    </transition-group>
     <div class="messages">
       <transition-group name="msg" tag="ul">
         <li v-for="msg in messages" :key="msg.id">
@@ -36,7 +38,14 @@ export default {
   data() {
     return {
       showLog: true,
+      logItems: [],
     };
+  },
+  created() {
+    this.unwatchLog = this.$watch('log', newLog => {
+      this.logItems = newLog[0].items;
+      setTimeout(this.unwatchLog, 0);
+    });
   },
   computed: {
     errorMessage() {
@@ -45,16 +54,16 @@ export default {
     messages() {
       return this.$store.getters.system.messages;
     },
+    log() {
+      return this.$store.getters.world.log;
+    },
     turn() {
       return this.$store.getters.world.turn;
     },
-    logItems() {
-      const log = this.$store.getters.world.log;
-      return log[log.length - 1]?.items;
-    },
   },
   watch: {
-    turn() {
+    turn(newTurn) {
+      this.logItems = this.$store.getters.world.log[newTurn]?.items;
       this.showLog = this.logItems.length > 0;
     },
   },
@@ -67,12 +76,14 @@ export default {
   left: 15px;
   bottom: 15px;
   padding: 15px;
-  background-color: #eee8c5;
+  background-color: $cBgLight;
   border-radius: 3px;
   box-shadow: $shadow2;
+  width: 300px;
 
   ul {
-    margin: 0;
+    margin: 0 -15px -15px;
+    border-top: 1px solid rgba($cText, 0.3);
   }
 
   .close {
@@ -82,9 +93,30 @@ export default {
   }
 
   li {
+    &:not(:last-child) {
+      border-bottom: 1px solid rgba($cText, 0.3);
+    }
+  }
+
+  a {
     font-size: 16px;
-    padding: 15px 0;
+    padding: 5px 15px 5px 60px;
+    height: 55px;
     position: relative;
+    display: flex;
+    align-items: center;
+    color: $cText;
+    text-decoration: none;
+    transition: background $animFast;
+
+    &.disabled,
+    &.disabled:hover {
+      pointer-events: none;
+    }
+
+    &:hover {
+      background-color: lighten($cBgLight, 5%);
+    }
   }
 
   .icon {
@@ -93,7 +125,8 @@ export default {
     height: 35px;
     border-radius: 3px;
     background-size: cover;
-    top: 5px;
+    top: 10px;
+    left: 15px;
   }
 
   .text {
@@ -146,6 +179,19 @@ export default {
   .success {
     color: lighten($cSuccess, 20%);
   }
+}
+
+.log-enter-active,
+.log-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.log-enter,
+.log-leave-active {
+  opacity: 0;
+  transform: translateY(90px);
+}
+.log-leave-active {
+  transform: translateY(-90px);
 }
 
 .msg-enter-active,

@@ -84,6 +84,8 @@ export default {
   left: 0;
   right: 0;
   z-index: 1;
+  display: grid;
+  align-items: center;
 }
 
 .modal-backdrop {
@@ -103,7 +105,7 @@ export default {
   box-shadow: 2px 2px 20px 1px;
   overflow-x: auto;
   position: relative;
-  min-width: 500px;
+  width: 500px;
   z-index: 2;
 
   header,
@@ -142,6 +144,7 @@ export default {
     position: absolute;
     right: 5px;
     top: 5px;
+    z-index: 1;
   }
 }
 

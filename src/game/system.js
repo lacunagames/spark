@@ -9,7 +9,10 @@ const messageTypes = {
   skillLearned: {
     type: 'success',
     msg: ({ title }) => `You have learnt ${title}.`,
-    duration: 10,
+  },
+  sparkSpell: {
+    type: 'success',
+    msg: ({ title, civs }) => `You cast ${title} for ${civs}.`,
   },
   skillAlreadyLearnt: {
     type: 'error',
@@ -31,6 +34,18 @@ const messageTypes = {
     type: 'error',
     msg: () => `No race selected.`,
   },
+  noCivChanges: {
+    type: 'error',
+    msg: () => `Nothing to save.`,
+  },
+  modifyDisc: {
+    type: 'success',
+    msg: ({ title }) => `${title} has been modified.`,
+  },
+  removeDisc: {
+    type: 'success',
+    msg: ({ title }) => `${title} has been removed.`,
+  },
 };
 
 class System extends StateHandler {
@@ -50,7 +65,7 @@ class System extends StateHandler {
     const isErr = newMessage.type === 'error';
 
     newMessage.text = newMessage.msg(args);
-    newMessage.duration = newMessage.duration || 3;
+    newMessage.duration = newMessage.duration || isErr ? 3 : 9;
     if (isErr && this.state.errorMessage) {
       this.clearMessage(this.state.errorMessage.id);
     } else if (!isErr && this.state.messages.length > 2) {

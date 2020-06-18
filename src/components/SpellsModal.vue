@@ -6,7 +6,7 @@
     </template>
     <template #body>
       <ul class="spell-tabs" v-show="spellTabs.length > 2">
-        <li v-for="tab in spellTabs" :key="tab.id" :class="{active: tab.id === selectedSpellTab}">
+        <li v-for="tab in spellTabs" :key="tab.id" :class="{selected: tab.id === selectedSpellTab}">
           <a href="#" @click.prevent="selectSpellTab(tab.id)" :title="tab.title">
             <span class="icon" :class="`icon-${tab.id}`"></span>
           </a>
@@ -16,7 +16,7 @@
         <li
           v-for="spell in filteredSpells"
           :key="spell.id"
-          :class="{active: selectedSpell && spell.id === selectedSpell.id}"
+          :class="{selected: selectedSpell && spell.id === selectedSpell.id, active: spell.isActive}"
         >
           <a href="#" @click.prevent="selectSpell(spell.id)">
             <span class="icon" :class="`icon-${spell.icon || spell.id}`"></span>
@@ -24,33 +24,25 @@
           </a>
         </li>
       </ul>
-      <div class="spell-details" v-if="selectedSpell">
-        <h2>
-          <span :class="`icon icon-${ selectedSpell.icon || selectedSpell.id }`"></span>
-          <span class="text">{{ selectedSpell.title }}</span>
-        </h2>
-        <p class="spell-desc">{{ selectedSpell.desc }}</p>
-        <div class="civ-checks">
-          <label v-for="civ in civList" :key="civ.id">
-            <input type="checkbox" :value="civ.id" v-model="selectedCivs" />
-            <span :class="`icon icon-${civ.id}`"></span>
-            <span class="title">{{ civ.title }}</span>
-          </label>
-        </div>
-        <p>Mana cost: {{ selectedSpell.mana * selectedCivs.length }}</p>
-        <button class="primary" @click.prevent="castSpell">Create</button>
-      </div>
+      <DiscDetails
+        :isSpell="true"
+        :isReset="isModalOpen"
+        :disc="selectedSpell"
+        @savedChanges="closeModal"
+      />
     </template>
   </Modal>
 </template>
 
 <script>
 import Modal from '@/components/Modal';
+import DiscDetails from '@/components/DiscDetails';
 
 export default {
   name: 'SpellsModal',
   components: {
     Modal,
+    DiscDetails,
   },
   data: function() {
     return {
@@ -63,9 +55,6 @@ export default {
   computed: {
     spark() {
       return this.$store.getters.spark;
-    },
-    civList() {
-      return this.$store.getters.civs.civList;
     },
     spellTabs() {
       const tabs = [{ id: 'all-spells', title: 'All spells' }];
@@ -82,14 +71,18 @@ export default {
       return tabs;
     },
     filteredSpells() {
-      return this.$store.getters.spark.spells.filter(
-        spell =>
-          !this.$store.getters.world.discs.find(
-            disc => disc.id === spell.createDisc || disc.id === spell.id
-          ) &&
-          (this.selectedSpellTab === 'all-spells' ||
-            spell.category === this.selectedSpellTab)
-      );
+      return this.$store.getters.spark.spells
+        .filter(
+          spell =>
+            this.selectedSpellTab === 'all-spells' ||
+            spell.category === this.selectedSpellTab
+        )
+        .map(spell => ({
+          ...spell,
+          isActive: !!this.$store.getters.world.discs.find(
+            disc => disc.id === spell.id
+          ),
+        }));
     },
   },
   watch: {
@@ -112,13 +105,6 @@ export default {
     selectSpell(id) {
       this.selectedCivs = [];
       this.selectedSpell = this.filteredSpells.find(spell => spell.id === id);
-    },
-    castSpell() {
-      if (
-        this.gameAction('castSpell', this.selectedSpell.id, this.selectedCivs)
-      ) {
-        this.closeModal();
-      }
     },
   },
 };
@@ -162,7 +148,7 @@ export default {
       }
     }
 
-    .active a {
+    .selected a {
       border-color: #1a821f;
     }
   }
@@ -186,88 +172,32 @@ export default {
         background-color: #ddd9c0;
       }
     }
-    .active a {
+    .selected a {
       background-color: #bab69e;
     }
 
     .icon {
       display: inline-block;
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       border-radius: 4px;
       background-size: cover;
       margin-right: 15px;
+      border: 2px solid #ccc;
+      background-color: darken($cBg, 30%);
+    }
+
+    .active .icon {
+      border-color: lighten($cGreen, 10%);
+
+      + .title {
+        color: $cGreen;
+      }
     }
     .title {
       position: relative;
       bottom: 15px;
       text-transform: capitalize;
-    }
-  }
-  .spell-details {
-    grid-area: details;
-    background: #f9f6e4;
-    padding: 20px;
-
-    h2 {
-      padding-top: 0;
-
-      .text {
-        position: relative;
-        bottom: 20px;
-      }
-
-      .icon {
-        display: inline-block;
-        width: 87px;
-        height: 87px;
-        border-radius: 4px;
-        margin-right: 20px;
-      }
-    }
-
-    .spell-desc {
-      font-size: 18px;
-      margin-bottom: 40px;
-    }
-  }
-  .civ-checks {
-    margin-bottom: 60px;
-
-    label {
-      display: inline-block;
-      margin: 10px;
-      position: relative;
-      cursor: pointer;
-    }
-
-    input {
-      position: absolute;
-      left: -9999em;
-    }
-
-    .icon {
-      display: inline-block;
-      width: 60px;
-      height: 60px;
-      background-size: cover;
-      border: 3px solid #ccc;
-      border-radius: 50px;
-    }
-    .title {
-      position: absolute;
-      bottom: -20px;
-      left: 0;
-      right: 0;
-      text-align: center;
-    }
-
-    input:checked + .icon {
-      border-color: #1a821f;
-    }
-
-    input:checked + .icon + .title {
-      color: #1a821f;
     }
   }
   .mana-points {

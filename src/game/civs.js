@@ -1,94 +1,18 @@
 import StateHandler from './statehandler';
 import allDiscs from './data/discs';
-
-const allCivs = [
-  {
-    id: 'trolls',
-    title: 'Trolls',
-    level: 1,
-    population: 100,
-    maxPopulation: 140,
-    popLevelGrow: 40,
-    xpToLevel: 12,
-    xpLevelGrow: 2,
-    biomes: ['jungle', 'desert', 'swamp'],
-    govs: ['tribal'],
-    actionDiscs: ['hunting', 'fishing', 'gathering', 'town'],
-  },
-  {
-    id: 'humans',
-    title: 'Humans',
-    level: 1,
-    population: 100,
-    maxPopulation: 120,
-    popLevelGrow: 30,
-    xpToLevel: 10,
-    xpLevelGrow: 2,
-    biomes: ['grassland', 'jungle', 'mountain'],
-    govs: ['tribal', 'oligarchy'],
-    actionDiscs: ['digging', 'fishing', 'gathering', 'town', 'mining'],
-  },
-  {
-    id: 'dwarves',
-    title: 'Dwarves',
-    level: 1,
-    population: 100,
-    maxPopulation: 100,
-    popLevelGrow: 20,
-    xpToLevel: 12,
-    xpLevelGrow: 3,
-    biomes: ['grassland', 'mountain'],
-    govs: ['tribal', 'oligarchy'],
-    actionDiscs: ['digging', 'fishing', 'hunting', 'town', 'mining'],
-  },
-  {
-    id: 'gnomes',
-    title: 'Gnomes',
-    level: 1,
-    population: 100,
-    maxPopulation: 120,
-    popLevelGrow: 30,
-    xpToLevel: 10,
-    xpLevelGrow: 4,
-    biomes: ['mountain', 'swamp', 'forest'],
-    govs: ['oligarchy'],
-    actionDiscs: ['digging', 'fishing', 'gathering', 'town', 'mining'],
-  },
-  {
-    id: 'elves',
-    title: 'Elves',
-    level: 1,
-    population: 100,
-    maxPopulation: 100,
-    popLevelGrow: 10,
-    xpToLevel: 14,
-    xpLevelGrow: 4,
-    biomes: ['swamp', 'forest'],
-    govs: ['oligarchy'],
-    actionDiscs: ['hunting', 'fishing', 'gathering', 'town'],
-  },
-  {
-    id: 'orcs',
-    title: 'Orcs',
-    level: 1,
-    population: 100,
-    maxPopulation: 140,
-    popLevelGrow: 20,
-    xpToLevel: 12,
-    xpLevelGrow: 2,
-    biomes: ['grassland', 'forest', 'desert'],
-    govs: ['tribal', 'oligarchy'],
-    actionDiscs: ['hunting', 'digging', 'gathering', 'town', 'mining'],
-  },
-];
+import { allCivs, allBoons } from './data/civList';
 
 const defaultState = {
   positions: [
     { left: 44, top: 12 },
     { left: 56, top: 12 },
+    { left: 44, top: 28 },
+    { left: 56, top: 28 },
+    { left: 44, top: 44 },
+    { left: 56, top: 44 },
   ],
+  allBoons,
   civList: [],
-  turn: 1,
 };
 
 class Civs extends StateHandler {
@@ -119,6 +43,7 @@ class Civs extends StateHandler {
             maxAction: 1,
             index: this.useIndex('civList'),
             connect: [],
+            popLog: [civ.population],
           },
         ],
       });
@@ -132,7 +57,7 @@ class Civs extends StateHandler {
         civ.govs[Math.floor(Math.random() * civ.govs.length)],
         civ.id
       );
-      if (civ.action >= 1) this.civAction(civ);
+      if (civ.action >= civ.level) this.civAction(civ);
     });
   }
 
@@ -173,6 +98,10 @@ class Civs extends StateHandler {
 
       const isLevelUp = civ.xp + grow.xp >= civ.xpToLevel;
       let maxPop = civ.maxPopulation;
+      let pop = Math.min(
+        maxPop,
+        Math.round((civ.population + grow.pop + Number.EPSILON) * 100) / 100
+      );
 
       if (isLevelUp) {
         grow.pop += civ.popLevelGrow * (civ.population / civ.maxPopulation);
@@ -184,10 +113,11 @@ class Civs extends StateHandler {
         level: civ.level + (isLevelUp ? 1 : 0),
         xp: civ.xp + grow.xp,
         xpToLevel: civ.xpToLevel + (isLevelUp ? civ.xpLevelGrow : 0),
-        maxAction: civ.maxActionBoost + (isLevelUp ? 1 : 0),
+        maxAction: civ.maxAction + (isLevelUp ? 1 : 0),
         action: civ.action + grow.action,
-        population: Math.min(maxPop, civ.population + grow.pop),
+        population: pop,
         maxPopulation: maxPop,
+        popLog: [...civ.popLog, pop],
       });
 
       if (isLevelUp) {
@@ -244,7 +174,14 @@ class Civs extends StateHandler {
   civAction(civ) {
     const possibleActions = civ.actionDiscs.filter(action => {
       const discLevel = allDiscs.find(disc => disc.id === action).level;
-      return !civ.connect.includes(action) && discLevel <= civ.level;
+      const obsolete = civ.connect.some(
+        conn =>
+          conn !== action &&
+          allDiscs.find(disc => disc.id === conn)?.upgrades?.includes(action)
+      );
+      return (
+        !civ.connect.includes(action) && discLevel <= civ.level && !obsolete
+      );
     });
     const discId =
       possibleActions[Math.floor(Math.random() * possibleActions.length)];

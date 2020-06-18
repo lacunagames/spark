@@ -1,10 +1,10 @@
 <template>
   <div class="game">
     <div class="content">
-      <CivsUI :hovered="hovered" @hoverChange="hoverChanged" />
-      <WorldUI :hovered="hovered" @hoverChange="hoverChanged" />
-      <SparkUI />
-      <MessagesUI />
+      <CivsUI :hovered="hovered" @hoverChange="hoverChanged" ref="civs" />
+      <WorldUI :hovered="hovered" @hoverChange="hoverChanged" ref="world" />
+      <SparkUI ref="spark" />
+      <MessagesUI @openLink="openLink" />
     </div>
   </div>
 </template>
@@ -27,6 +27,7 @@ export default {
     return {
       hovered: '',
       timer: undefined,
+      openDisc: undefined,
     };
   },
   methods: {
@@ -38,6 +39,23 @@ export default {
         }, 200);
       } else {
         this.hovered = '';
+      }
+    },
+    openLink(item) {
+      const disc =
+        item.link === 'disc' &&
+        this.$store.getters.world.discs.find(disc => disc.id === item.icon);
+      const civ =
+        item.link === 'civ' &&
+        this.$store.getters.civs.civList.find(civ => civ.id === item.icon);
+
+      switch (item.link) {
+        case 'disc':
+          return this.$refs.world.openModal(disc);
+        case 'skills':
+          return this.$refs.spark.openModal('skills');
+        case 'civ':
+          return this.$refs.civs.openModal(civ);
       }
     },
   },

@@ -1,74 +1,118 @@
 <template>
-  <ul class="civs">
-    <li class="connections">
-      <svg>
-        <g
-          v-for="conn in connections"
-          :key="conn.id"
-          :class="{
+  <div>
+    <ul class="civs">
+      <li class="connections">
+        <svg>
+          <g
+            v-for="conn in connections"
+            :key="conn.id"
+            :class="{
             static: true,
             positive: conn.isPositive,
             negative: conn.isNegative,
             visible: conn.isVisible,
             modify: conn.isModify,
           }"
-        >
-          <line
-            class="static"
-            :x1="conn.x1 + '%'"
-            :y1="conn.y1 + '%'"
-            :x2="conn.x2 + '%'"
-            :y2="conn.y2 + '%'"
+          >
+            <line
+              class="static"
+              :x1="conn.x1 + '%'"
+              :y1="conn.y1 + '%'"
+              :x2="conn.x2 + '%'"
+              :y2="conn.y2 + '%'"
+            />
+            <line :x1="conn.x1 + '%'" :y1="conn.y1 + '%'" :x2="conn.x2 + '%'" :y2="conn.y2 + '%'" />
+          </g>
+        </svg>
+      </li>
+      <li
+        v-for="civ in civs.civList"
+        :key="civ.id"
+        :style="{
+          left: civs.positions[civ.index].left + '%',
+          top: civs.positions[civ.index].top + '%',
+        }"
+      >
+        <a href="#" v-on="hoverHandle(civ.id)" @click.prevent="openModal(civ)">
+          <div class="title">
+            <span>{{ civ.level }}</span>
+            {{ civ.title }}
+          </div>
+          <span class="population" :class="`icon-${civ.id}`">
+            <span
+              :class="`icon-${civ.id}`"
+              :style="{ height: Math.floor(100 - (civ.population / civ.maxPopulation) * 100) + '%' }"
+            ></span>
+          </span>
+          <CircleMeter
+            :size="70"
+            :width="4"
+            emptyColor="222"
+            fillColor="ffe825"
+            :increaseOnly="true"
+            :value="civ.xp / civ.xpToLevel"
           />
-          <line :x1="conn.x1 + '%'" :y1="conn.y1 + '%'" :x2="conn.x2 + '%'" :y2="conn.y2 + '%'" />
-        </g>
-      </svg>
-    </li>
-    <li
-      v-for="civ in civs.civList"
-      :key="civ.id"
-      :style="{
-        left: civs.positions[civ.index].left + '%',
-        top: civs.positions[civ.index].top + '%',
-      }"
+        </a>
+      </li>
+    </ul>
+
+    <Modal
+      v-if="selectedCiv"
+      v-show="isModalOpen"
+      @close="closeModal"
+      classes="civ-modal side-panel"
     >
-      <a href="#" v-on="hoverHandle(civ.id)">
-        <div class="title">
-          <span>{{ civ.level }}</span>
-          {{ civ.title }}
+      <template #body>
+        <span :class="`civ-icon icon-${selectedCiv.id}`"></span>
+        <h2>
+          {{ selectedCiv.title }}
+          <span>(Level {{ selectedCiv.level }})</span>
+        </h2>
+        <p class="desc">{{ selectedCiv.desc }}</p>
+        <Graph :data="selectedCiv.popLog" :dataMax="selectedCiv.maxPopulation" title="Population" />
+        <div class="history">
+          <h3>History</h3>
+          <ol>
+            <li v-for="item in civLog" :key="item.id" :class="{turn: item.isTurnItem}">
+              <span v-if="item.icon" :class="`icon icon-${item.icon}`"></span>
+              {{ item.text }}
+            </li>
+          </ol>
         </div>
-        <span class="population" :class="`icon-${civ.id}`">
-          <span
-            :class="`icon-${civ.id}`"
-            :style="{ height: Math.floor(100 - (civ.population / civ.maxPopulation) * 100) + '%' }"
-          ></span>
-        </span>
-        <CircleMeter
-          :size="70"
-          :width="4"
-          emptyColor="222"
-          fillColor="ffe825"
-          :increaseOnly="true"
-          :value="civ.xp / civ.xpToLevel"
-        />
-      </a>
-    </li>
-  </ul>
+        <div class="boons">
+          <h3>Boons</h3>
+          <ol>
+            <li v-for="item in boonList" :key="item.id">
+              <span :class="`icon icon-${item.icon || item.id}`"></span>
+              <h4>{{ item.title }}</h4>
+              <p>{{ item.desc }}</p>
+            </li>
+          </ol>
+        </div>
+      </template>
+    </Modal>
+  </div>
 </template>
 
 <script>
 import CircleMeter from '@/components/CircleMeter';
+import Modal from '@/components/Modal';
+import Graph from '@/components/Graph';
 
 export default {
   name: 'CivUI',
   components: {
     CircleMeter,
+    Modal,
+    Graph,
   },
   props: {
     hovered: String,
   },
   data() {
     return {
+      selectedCiv: undefined,
+      isModalOpen: false,
       hoverHandle(civId) {
         return {
           mouseover: () => this.$emit('hoverChange', civId),
@@ -130,6 +174,28 @@ export default {
         });
       });
       return connections;
+    },
+    boonList() {
+      return this.selectedCiv?.boons.map(boonId =>
+        this.$store.getters.civs.allBoons.find(boon => boon.id === boonId)
+      );
+    },
+    civLog() {
+      if (!this.selectedCiv) return [];
+      return this.gameAction('getFilteredLog', {
+        civ: this.selectedCiv.id,
+        order: 'desc',
+        insertTurn: true,
+      });
+    },
+  },
+  methods: {
+    openModal(civ) {
+      this.selectedCiv = civ;
+      this.isModalOpen = true;
+    },
+    closeModal() {
+      this.isModalOpen = false;
     },
   },
 };
@@ -274,6 +340,136 @@ export default {
         height: 30px;
         text-align: center;
       }
+    }
+  }
+}
+
+.civ-modal {
+  header {
+    padding: 0;
+    h2 {
+      display: none;
+    }
+  }
+  .body {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 80px auto 50%;
+    grid-gap: 20px;
+    grid-template-rows: min-content min-content min-content auto;
+    grid-template-areas:
+      'icon title title'
+      'icon desc desc'
+      'graph graph graph'
+      'boons boons history';
+  }
+  .civ-icon {
+    display: inline-block;
+    width: 80px;
+    height: 80px;
+    border-radius: 4px;
+    background-size: cover;
+    grid-area: icon;
+  }
+  h2 {
+    padding: 0;
+    margin-bottom: 0;
+    grid-area: title;
+
+    span {
+      font-size: 20px;
+      line-height: 20px;
+      padding-left: 5px;
+    }
+  }
+  .desc {
+    grid-area: desc;
+    font-size: 16px;
+    line-height: 24px;
+    margin: -10px 0 0;
+  }
+  .graph {
+    grid-area: graph;
+    margin: 0 -20px;
+    padding: 20px;
+    line-height: 0;
+  }
+  .history,
+  .boons {
+    background-color: $cBgLightest;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    h3 {
+      padding-left: 8px;
+      margin-bottom: 5px;
+    }
+    ol {
+      margin: 0;
+      overflow: auto;
+    }
+    .icon {
+      position: absolute;
+      width: 35px;
+      height: 35px;
+      border-radius: 3px;
+      background-size: cover;
+      top: 5px;
+      left: 7px;
+    }
+    li {
+      font-size: 16px;
+      line-height: 16px;
+      padding: 5px 10px 5px 50px;
+      height: 45px;
+      position: relative;
+      display: flex;
+      align-items: center;
+
+      &:not(:last-child) {
+        border-bottom: 1px solid lighten($cBg, 20%);
+      }
+    }
+  }
+  .history {
+    grid-area: history;
+
+    .turn {
+      padding-left: 8px;
+      text-transform: uppercase;
+      align-items: flex-end;
+    }
+  }
+  .boons {
+    grid-area: boons;
+
+    ol {
+      height: 100%;
+    }
+    li {
+      flex-direction: column;
+      align-items: flex-start;
+      height: 50px;
+      padding-left: 55px;
+    }
+    .icon {
+      top: 5px;
+      left: 8px;
+      width: 40px;
+      height: 40px;
+    }
+    h3 {
+      margin-bottom: 10px;
+    }
+    h4 {
+      font-family: $font;
+      font-size: 18px;
+      margin: 0 0 5px;
+      padding: 3px 0 0;
+    }
+    p {
+      font-size: 14px;
+      margin-bottom: 0;
     }
   }
 }

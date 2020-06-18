@@ -10,17 +10,42 @@
           top: world.positions[disc.type][disc.index].top + '%',
         }"
       >
-        <a href="#" :class="`icon-${disc.id}`" :title="disc.title" v-on="hoverHandle(disc.id)"></a>
+        <a
+          href="#"
+          :class="`icon-${disc.id}`"
+          :title="disc.title"
+          v-on="hoverHandle(disc.id)"
+          @click.prevent="openModal(disc)"
+        ></a>
       </li>
     </ul>
+    <Modal v-show="isModalOpen" @close="closeModal" classes="disc-modal">
+      <template #body>
+        <DiscDetails
+          :isSpell="false"
+          :isReset="isModalOpen"
+          :disc="selectedDisc"
+          @savedChanges="closeModal"
+        />
+      </template>
+    </Modal>
   </div>
 </template>
 
 <script>
+import Modal from '@/components/Modal';
+import DiscDetails from '@/components/DiscDetails';
+
 export default {
   name: 'WorldUI',
+  components: {
+    Modal,
+    DiscDetails,
+  },
   data() {
     return {
+      isModalOpen: false,
+      selectedDisc: undefined,
       hoverHandle(discId) {
         return {
           mouseover: () => this.$emit('hoverChange', discId),
@@ -39,12 +64,34 @@ export default {
       return this.$store.getters.world;
     },
   },
+  methods: {
+    openModal(disc) {
+      this.selectedDisc = disc;
+      this.isModalOpen = true;
+    },
+    closeModal() {
+      this.isModalOpen = false;
+    },
+  },
 };
 </script>
 
 <style lang="scss">
 .world {
   height: 100%;
+
+  .disc-modal {
+    header {
+      padding: 0;
+      border: none;
+      h2 {
+        display: none;
+      }
+    }
+    .body {
+      padding: 0;
+    }
+  }
 
   .discs {
     margin-bottom: 0;

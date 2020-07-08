@@ -3,6 +3,7 @@ import StateHandler from './statehandler';
 const defaultState = {
   messages: [],
   errorMessage: undefined,
+  muteMessages: true,
 };
 
 const messageTypes = {
@@ -42,9 +43,26 @@ const messageTypes = {
     type: 'success',
     msg: ({ title }) => `${title} has been modified.`,
   },
+  boonAdded: {
+    type: 'success',
+    msg: ({ text }) => text,
+  },
+  modifyBoon: {
+    type: 'success',
+    msg: ({ text }) => text,
+  },
   removeDisc: {
     type: 'success',
     msg: ({ title }) => `${title} has been removed.`,
+  },
+  newManaCharge: {
+    type: 'success',
+    msg: ({ count }) =>
+      `You gained ${count} new mana charge${count > 1 ? 's' : ''}.`,
+  },
+  sparkManaGained: {
+    type: 'success',
+    msg: ({ amount }) => `You gained ${amount} mana.`,
   },
 };
 
@@ -58,6 +76,9 @@ class System extends StateHandler {
   }
 
   showMessage({ type, ...args }) {
+    if (this.state.muteMessages) {
+      return;
+    }
     const newMessage = {
       ...messageTypes[type],
       id: this.useIndex('msg'),

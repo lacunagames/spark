@@ -2,7 +2,7 @@
   <div class="world">
     <ul class="discs">
       <li
-        v-for="disc in world.discs"
+        v-for="disc in NoTechDiscs"
         :key="disc.id"
         :class="disc.type"
         :style="{
@@ -21,10 +21,10 @@
     </ul>
     <Modal v-show="isModalOpen" @close="closeModal" classes="disc-modal">
       <template #body>
-        <DiscDetails
+        <SpellDetails
           :isSpell="false"
           :isReset="isModalOpen"
-          :disc="selectedDisc"
+          :spell="selectedDisc"
           @savedChanges="closeModal"
         />
       </template>
@@ -34,13 +34,13 @@
 
 <script>
 import Modal from '@/components/Modal';
-import DiscDetails from '@/components/DiscDetails';
+import SpellDetails from '@/components/SpellDetails';
 
 export default {
   name: 'WorldUI',
   components: {
     Modal,
-    DiscDetails,
+    SpellDetails,
   },
   data() {
     return {
@@ -63,6 +63,11 @@ export default {
     world() {
       return this.$store.getters.world;
     },
+    NoTechDiscs() {
+      return this.$store.getters.world.discs.filter(
+        disc => disc.type !== 'knowledge'
+      );
+    },
   },
   methods: {
     openModal(disc) {
@@ -81,14 +86,14 @@ export default {
   height: 100%;
 
   .disc-modal {
-    header {
+    .modal-header {
       padding: 0;
       border: none;
       h2 {
         display: none;
       }
     }
-    .body {
+    .modal-body {
       padding: 0;
     }
   }

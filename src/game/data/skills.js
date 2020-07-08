@@ -280,7 +280,7 @@ const skills = [
   {
     id: 'mana6',
     icon: 'discount-fire',
-    effect: { discount: ['fire', 0.85] },
+    effect: { discount: ['fire', 0.8] },
     title: 'Discount fire 6',
     desc: '',
     pos: [50, 24],
@@ -326,7 +326,7 @@ const skills = [
   {
     id: 'mana11',
     icon: 'discount-air',
-    effect: { discount: ['air', 0.85] },
+    effect: { discount: ['air', 0.8] },
     title: 'Discount air 11',
     desc: '',
     pos: calcPos(50, 50, 50, 24, 90),
@@ -372,7 +372,7 @@ const skills = [
   {
     id: 'mana16',
     icon: 'discount-water',
-    effect: { discount: ['water', 0.85] },
+    effect: { discount: ['water', 0.8] },
     title: 'Discount water 16',
     desc: '',
     pos: calcPos(50, 50, 50, 24, 180),
@@ -418,7 +418,7 @@ const skills = [
   {
     id: 'mana21',
     icon: 'discount-earth',
-    effect: { discount: ['earth', 0.85] },
+    effect: { discount: ['earth', 0.8] },
     title: 'Discount earth 21',
     desc: '',
     pos: calcPos(50, 50, 50, 24, 270),
@@ -428,7 +428,7 @@ const skills = [
     id: 'mana22',
     icon: 'mana-charge',
     effect: { manaCharge: 'earth' },
-    title: 'Fire charge 22',
+    title: 'Earth charge 22',
     desc: '',
     pos: calcPos(50, 50, 50, 8, 270),
     minor: true,

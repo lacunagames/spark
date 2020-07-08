@@ -1,7 +1,9 @@
 import StateHandler from './statehandler';
 import allDiscs from './data/discs';
+import { allBoons } from './data/civList';
+import allTechs from './data/civTech';
 
-const getPosArray = (minX, minY, maxX, maxY) => {
+const getPosArray = areas => {
   const step = 10;
   const rand = 1;
   const arr = [];
@@ -9,20 +11,22 @@ const getPosArray = (minX, minY, maxX, maxY) => {
   const distance = (a, b) =>
     Math.sqrt(Math.pow(a.left - b.left, 2) + Math.pow(a.top - b.top, 2));
 
-  for (let ix = 0; ix < (maxX - minX) / (step * 0.7); ix++) {
-    for (let iy = 0; iy < (maxY - minY) / step; iy++) {
-      arr.push({
-        left:
-          minX +
-          ix * step * 0.7 +
-          Math.floor(Math.random() * 20 * rand - 10 * rand) / 10,
-        top:
-          minY +
-          iy * step +
-          Math.floor(Math.random() * 20 * rand - 10 * rand) / 10,
-      });
+  areas.forEach(coords => {
+    for (let ix = 0; ix < (coords.maxX - coords.minX) / (step * 0.7); ix++) {
+      for (let iy = 0; iy < (coords.maxY - coords.minY) / step; iy++) {
+        arr.push({
+          left:
+            coords.minX +
+            ix * step * 0.7 +
+            Math.floor(Math.random() * 20 * rand - 10 * rand) / 10,
+          top:
+            coords.minY +
+            iy * step +
+            Math.floor(Math.random() * 20 * rand - 10 * rand) / 10,
+        });
+      }
     }
-  }
+  });
   orderedArr.push(arr.splice(Math.floor(Math.random() * arr.length), 1)[0]);
   for (let i = arr.length; i > 0; i--) {
     let maxDistance = 0;
@@ -47,10 +51,12 @@ const getPosArray = (minX, minY, maxX, maxY) => {
 };
 
 const positions = {
-  biome: [...getPosArray(6, 8, 40, 40)],
-  knowledge: [...getPosArray(46, 46, 80, 66)],
-  event: [...getPosArray(66, 8, 96, 40)],
-  action: [...getPosArray(6, 47, 40, 96)],
+  biome: getPosArray([{ minX: 6, minY: 8, maxX: 40, maxY: 40 }]),
+  event: getPosArray([
+    { minX: 66, minY: 8, maxX: 96, maxY: 40 },
+    { minX: 46, minY: 46, maxX: 80, maxY: 66 },
+  ]),
+  action: getPosArray([{ minX: 6, minY: 47, maxX: 40, maxY: 96 }]),
 };
 
 const defaultState = {
@@ -58,6 +64,7 @@ const defaultState = {
   positions,
   turn: 0,
   log: [{ id: 0, items: [] }],
+  allDisclike: [...allDiscs, ...allBoons, ...allTechs],
 };
 
 class World extends StateHandler {
@@ -66,7 +73,7 @@ class World extends StateHandler {
 
     this.state = {};
     this.setState(defaultState);
-    this.initIndexes('biome', 'knowledge', 'action', 'event');
+    this.initIndexes('biome', 'action', 'knowledge', 'event');
     this.initWorld();
   }
 
@@ -79,22 +86,36 @@ class World extends StateHandler {
     });
 
     this.civs.civTurn();
+    this.worldTurn();
     this.spark.sparkTurn();
-    if (this.state.turn === 7) {
+  }
+
+  worldTurn() {
+    if (this.state.turn % 7 === 0 && this.civs.state.civList.length) {
+      const dangerDiscs = allDiscs
+        .filter(
+          disc =>
+            (disc.labels?.includes('force') ||
+              disc.labels?.includes('beast')) &&
+            !this.state.discs.find(discFind => discFind.id === disc.id)
+        )
+        .map(disc => disc.id);
+      const randomDanger =
+        dangerDiscs[Math.floor(Math.random() * dangerDiscs.length)];
       this.createDisc(
-        'tiger',
+        randomDanger,
         this.civs.state.civList.map(civ => civ.id)
       );
       this.logEvent({
         type: 'dangerAppeared',
-        disc: 'tiger',
+        disc: randomDanger,
         civs: this.civs.state.civList.map(civ => civ.id),
       });
     }
   }
 
   createDisc(discId, civIds) {
-    const disc = allDiscs.find(disc => disc.id === discId);
+    const disc = [...allDiscs, ...allTechs].find(disc => disc.id === discId);
     civIds = Array.isArray(civIds) ? civIds : [civIds];
     const upgraded = this.state.discs.find(disc =>
       disc.upgrades?.includes(discId)
@@ -110,7 +131,7 @@ class World extends StateHandler {
     ) {
       return false;
     }
-    disc.upgrades?.forEach(upgradeMe => {
+    [...(disc.upgrades || []), ...(disc.removes || [])].forEach(upgradeMe => {
       if (
         this.civs.state.civList.every(
           civ => civ.connect.includes(upgradeMe) === civIds.includes(civ.id)
@@ -130,10 +151,12 @@ class World extends StateHandler {
     this.civs.state.civList.forEach(civ => {
       if (civIds.includes(civ.id) && !civ.connect.includes(upgraded?.id)) {
         this.civs.connectDisc(civ.id, discId);
-        disc.upgrades?.forEach(upgradeMe => {
-          if (civ.connect.includes(upgradeMe))
-            this.civs.disconnectDisc(civ.id, upgradeMe);
-        });
+        [...(disc.upgrades || []), ...(disc.removes || [])].forEach(
+          upgradeMe => {
+            if (civ.connect.includes(upgradeMe))
+              this.civs.disconnectDisc(civ.id, upgradeMe);
+          }
+        );
       }
     });
     return this.state.discs.find(disc => disc.id === discId);
@@ -162,10 +185,31 @@ class World extends StateHandler {
     });
   }
 
+  executeActions({ actions, civId }) {
+    actions.forEach(action => {
+      if (action.createRandomBoon) {
+        const boonId =
+          action.createRandomBoon[
+            Math.floor(Math.random() * action.createRandomBoon.length)
+          ];
+        this.civs.addBoon(boonId, civId);
+        let log = this.logEvent({
+          type: 'boonAdded',
+          boon: boonId,
+          civChanges: [{ id: civId, type: 'connect' }],
+        });
+        this.system.showMessage({
+          type: 'boonAdded',
+          text: log.text,
+        });
+      }
+    });
+  }
+
   logEvent({ type, ...args }) {
     const getDynamic = (
       type,
-      { disc, civ, civs, level, skill, civChanges }
+      { disc, civ, civs, level, skill, civChanges, xpThisTurn, boon }
     ) => {
       const discTitle = this.state.discs.find(discFind => discFind.id === disc)
         ?.title;
@@ -175,6 +219,7 @@ class World extends StateHandler {
           .filter(civ => civs.includes(civ.id))
           .map(civ => civ.title)
           .join(', ');
+      const boonTitle = allBoons.find(boonFind => boonFind.id === boon)?.title;
       const civTitle = this.civs.state.civList.find(
         civFind => civFind.id === civ
       )?.title;
@@ -191,6 +236,17 @@ class World extends StateHandler {
           }`;
         })
         .join(', ');
+      const getCivList = type =>
+        civChanges
+          ?.filter(change => change.type === type)
+          .map(
+            change =>
+              this.civs.state.civList.find(civ => civ.id === change.id).title
+          )
+          .join(', ');
+      const connectCivList = getCivList('connect');
+      const disconnectCivList = getCivList('disconnect');
+      let text;
 
       switch (type) {
         case 'dangerAppeared':
@@ -234,16 +290,50 @@ class World extends StateHandler {
             icon: skill,
             link: 'skills',
           };
+        case 'sparkXpGained':
+          return {
+            text: `You gained ${xpThisTurn} experience point${
+              xpThisTurn > 1 ? 's' : ''
+            }.`,
+            icon: 'xp-gain',
+            link: 'skills',
+          };
         case 'modifyDisc':
           return {
             text: `${discTitle} has been modified. ${civChangesTitle}.`,
             icon: disc,
             link: 'disc',
           };
+        case 'boonAdded':
+          return {
+            text: `${boonTitle} has been added for ${connectCivList}.`,
+            icon: boon,
+          };
+        case 'modifyBoon':
+          text = connectCivList.length
+            ? `You cast ${boonTitle} for ${connectCivList}. `
+            : '';
+          text += disconnectCivList.length
+            ? `You removed ${boonTitle} from ${disconnectCivList}.`
+            : '';
+          return {
+            text,
+            icon: boon,
+          };
         case 'removeDisc':
           return {
             text: `${discTitle} has been removed.`,
             icon: disc,
+          };
+        case 'civGainedBoon':
+          return {
+            text: `${civTitle} have gained the ${boonTitle} boon.`,
+            icon: boon,
+          };
+        case 'civLostBoon':
+          return {
+            text: `${civTitle} have lost the ${boonTitle} boon.`,
+            icon: boon,
           };
         default:
           return {
@@ -254,7 +344,7 @@ class World extends StateHandler {
     };
     this._updateStateObj('log', this.state.turn, {
       items: [
-        ...this.state.log[this.state.log.length - 1].items,
+        ...this.state.log[this.state.turn].items,
         {
           type,
           ...args,
@@ -262,6 +352,9 @@ class World extends StateHandler {
         },
       ],
     });
+    return this.state.log[this.state.turn].items[
+      this.state.log[this.state.turn].items.length - 1
+    ];
   }
 
   getFilteredLog({

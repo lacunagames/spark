@@ -55,6 +55,10 @@
   }
 }
 
+.icon {
+  background-size: cover;
+}
+
 .access {
   @include access;
 }

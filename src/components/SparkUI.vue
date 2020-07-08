@@ -4,25 +4,41 @@
       <div class="turn-button">
         Turn {{ world.turn }}
         <br />
-        <button class="primary" @click="gameAction('nextTurn', 2)">Next turn</button>
+        <button class="primary" @click="gameAction('nextTurn', 2)">
+          Next turn
+        </button>
       </div>
 
       <button class="mana-orb" @click="openModal('spells')">
-        <span class="filled" :style="{ top: 100 - (spark.mana / spark.maxMana) * 100 + '%' }"></span>
-        <span>{{ spark.mana }}</span>
+        <span class="inner">
+          <span
+            class="filled"
+            :style="{ top: 100 - (spark.mana / spark.maxMana) * 100 + '%' }"
+          ></span>
+          <span>{{ spark.mana }}</span>
+        </span>
+        <span
+          class="charges"
+          @click.stop="gameAction('popManaCharge')"
+          :title="`Use charge to gain ${spark.chargeToMana} mana`"
+        >
+          <span v-for="index in spark.manaCharges" :key="index"></span>
+        </span>
       </button>
 
-      <button class="xp-orb" :class="{ flipped: isNewLevelUp }" @click="openModal('skills')">
-        <span>{{ isNewLevelUp ? '+' : sparkLevel }}</span>
-        <CircleMeter
-          :size="50"
-          :width="4"
-          emptyColor="222"
-          fillColor="ffe825"
-          :increaseOnly="true"
-          :value="spark.xp / spark.xpToLevel"
-          @flipped="xpFlipped"
-        />
+      <button class="xp-orb" @click="openModal('skills')">
+        <span class="inner" :class="{ flipped: isNewLevelUp }">
+          <span>{{ isNewLevelUp ? '+' : sparkLevel }}</span>
+          <CircleMeter
+            :size="50"
+            :width="4"
+            emptyColor="222"
+            fillColor="ffe825"
+            :increaseOnly="true"
+            :value="spark.xp / spark.xpToLevel"
+            @flipped="xpFlipped"
+          />
+        </span>
       </button>
     </div>
     <SpellsModal ref="spellsModal" />
@@ -104,60 +120,88 @@ export default {
   .mana-orb {
     display: block;
     position: absolute;
-    border-radius: 100px;
-    color: #fff;
-    width: 50px;
-    height: 50px;
     font-size: 28px;
-    padding: 15px 0px;
     text-align: center;
-    overflow: hidden;
     text-decoration: none;
     font-family: $font;
+    width: 0;
+    height: 0;
+    line-height: 0;
+    padding: 0;
+    margin: 0;
+
+    .inner {
+      padding: 15px 0px;
+      position: relative;
+      display: block;
+      border-radius: 100px;
+      color: #fff;
+      width: 50px;
+      height: 50px;
+      overflow: hidden;
+      line-height: 20px;
+    }
   }
 
   .xp-orb {
     position: absolute;
-    right: 330px;
-    bottom: 100px;
-    border-radius: 100px;
-    background-color: #585442;
+    right: 365px;
+    bottom: 165px;
+
+    .inner {
+      background-color: #585442;
+      &:hover {
+        background-color: #756f52;
+      }
+
+      &.flipped {
+        background-color: #14bc00;
+
+        &:hover {
+          background-color: #22e10c;
+        }
+      }
+    }
 
     svg {
       position: absolute;
       left: 0;
       top: 0;
     }
-
-    &:hover {
-      background-color: #756f52;
-    }
-
-    &.flipped {
-      background-color: #14bc00;
-
-      &:hover {
-        background-color: #22e10c;
-      }
-    }
   }
 
   .mana-orb {
-    right: 270px;
-    bottom: 150px;
-    background-color: #4b4258;
-    border: 2px solid #3f3d34;
+    right: 300px;
+    bottom: 210px;
 
-    &:hover {
-      background-color: lighten(#4b4258, 10%);
-
-      .filled {
-        background-color: lighten(#5204a7, 10%);
-      }
+    .inner {
+      background-color: #4b4258;
+      border: 2px solid #3f3d34;
     }
-
     span {
       position: relative;
+    }
+    .charges span {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      background-color: #8235d5;
+      border: 2px solid #5204a7;
+      border-radius: 333px;
+      position: absolute;
+      top: -75px;
+      left: 15px;
+      &:hover {
+        background-color: lighten(#8235d5, 10%);
+      }
+      &:nth-child(2) {
+        top: -60px;
+        left: -12px;
+      }
+      &:nth-child(3) {
+        top: -60px;
+        left: 42px;
+      }
     }
 
     .filled {
@@ -171,6 +215,12 @@ export default {
       background-color: #5204a7;
       border-top: 2px solid #8235d5;
       transition: top $animFast, background-color $animFast;
+    }
+    .inner:hover {
+      background-color: lighten(#4b4258, 10%);
+      .filled {
+        background-color: lighten(#5204a7, 10%);
+      }
     }
   }
 

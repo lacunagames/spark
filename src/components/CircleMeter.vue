@@ -5,17 +5,17 @@
         :r="radius"
         :cx="center"
         :cy="center"
-        :style="{stroke: `#${emptyColor}`, 'stroke-width': width}"
+        :style="{ stroke: `#${emptyColor}`, 'stroke-width': width }"
       />
       <circle
         :r="radius"
         :cx="center"
         :cy="center"
         class="progress"
-        :class="{'no-transition': noTransition}"
+        :class="{ 'no-transition': noTransition }"
         :style="{
           'stroke-dasharray': `${dashVal * lineLength} ${lineLength}`,
-          'stroke': `#${flipping ? emptyColor : fillColor}`,
+          stroke: `#${flipping ? emptyColor : fillColor}`,
           'stroke-width': width,
         }"
       />

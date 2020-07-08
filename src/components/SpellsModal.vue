@@ -1,13 +1,25 @@
 <template>
-  <Modal v-show="isModalOpen" @close="closeModal" classes="side-panel spell-modal">
+  <Modal
+    v-show="isModalOpen"
+    @close="closeModal"
+    classes="side-panel spell-modal"
+  >
     <template #header>
       <h2>Spells</h2>
       <p class="mana-points">Mana: {{ spark.mana }} / {{ spark.maxMana }}</p>
     </template>
     <template #body>
       <ul class="spell-tabs" v-show="spellTabs.length > 2">
-        <li v-for="tab in spellTabs" :key="tab.id" :class="{selected: tab.id === selectedSpellTab}">
-          <a href="#" @click.prevent="selectSpellTab(tab.id)" :title="tab.title">
+        <li
+          v-for="tab in spellTabs"
+          :key="tab.id"
+          :class="{ selected: tab.id === selectedSpellTab }"
+        >
+          <a
+            href="#"
+            @click.prevent="selectSpellTab(tab.id)"
+            :title="tab.title"
+          >
             <span class="icon" :class="`icon-${tab.id}`"></span>
           </a>
         </li>
@@ -16,7 +28,10 @@
         <li
           v-for="spell in filteredSpells"
           :key="spell.id"
-          :class="{selected: selectedSpell && spell.id === selectedSpell.id, active: spell.isActive}"
+          :class="{
+            selected: selectedSpell && spell.id === selectedSpell.id,
+            active: spell.isActive,
+          }"
         >
           <a href="#" @click.prevent="selectSpell(spell.id)">
             <span class="icon" :class="`icon-${spell.icon || spell.id}`"></span>
@@ -24,10 +39,10 @@
           </a>
         </li>
       </ul>
-      <DiscDetails
+      <SpellDetails
         :isSpell="true"
         :isReset="isModalOpen"
-        :disc="selectedSpell"
+        :spell="selectedSpell"
         @savedChanges="closeModal"
       />
     </template>
@@ -36,13 +51,13 @@
 
 <script>
 import Modal from '@/components/Modal';
-import DiscDetails from '@/components/DiscDetails';
+import SpellDetails from '@/components/SpellDetails';
 
 export default {
   name: 'SpellsModal',
   components: {
     Modal,
-    DiscDetails,
+    SpellDetails,
   },
   data: function() {
     return {
@@ -79,9 +94,14 @@ export default {
         )
         .map(spell => ({
           ...spell,
-          isActive: !!this.$store.getters.world.discs.find(
-            disc => disc.id === spell.id
-          ),
+          isActive:
+            spell.type === 'boon'
+              ? !!this.$store.getters.civs.boons.find(
+                  boon => boon.id === spell.id
+                )
+              : !!this.$store.getters.world.discs.find(
+                  disc => disc.id === spell.id
+                ),
         }));
     },
   },
@@ -112,7 +132,7 @@ export default {
 
 <style lang="scss">
 .spell-modal {
-  .body {
+  .modal-body {
     padding: 75px 0 0;
     display: grid;
     grid-template-columns: 250px auto;

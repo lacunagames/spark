@@ -4,12 +4,23 @@
     <div
       class="label"
       v-if="hoverRect > -1"
-      :class="{below: points[hoverRect].y2 < 50, before: points[hoverRect].x2 > width - 10, after: points[hoverRect].x2 < 30}"
-      :style="{left: points[hoverRect].x2 + 'px', top: points[hoverRect].y2 + 20 + 'px' }"
+      :class="{
+        below: points[hoverRect].y2 < 50,
+        before: points[hoverRect].x2 > width - 10,
+        after: points[hoverRect].x2 < 30,
+      }"
+      :style="{
+        left: points[hoverRect].x2 + 'px',
+        top: points[hoverRect].y2 + 20 + 'px',
+      }"
     >
       <p>{{ points[hoverRect].val }}</p>
     </div>
-    <svg class="chart" :width="width + 2 * padding" :height="height + 2 * padding">
+    <svg
+      class="chart"
+      :width="width + 2 * padding"
+      :height="height + 2 * padding"
+    >
       <rect :x="padding" :y="padding" :width="width" :height="height" />
       <line
         v-for="point in points"
@@ -61,30 +72,28 @@ export default {
       const tick = this.width / this.resolution;
       let xLast, yLast;
 
-      return this.data
-        .slice(Math.max(this.data.length - this.resolution - 1, 0))
-        .map((val, i) => {
-          const x2 = utils.round(
-            (this.width / this.resolution) * i + this.padding
-          );
-          const y2 = utils.round(
-            ((this.maxVal - val) / this.maxVal) * this.height + this.padding
-          );
-          const obj = {
-            x1: xLast > -1 ? xLast : x2,
-            y1: yLast > -1 ? yLast : y2,
-            x2,
-            y2,
-            rectX: x2 - tick / 2,
-            rectWidth: tick,
-            val,
-            index: i + this.resolution + 1,
-          };
+      return this.data.slice(-this.resolution).map((val, i) => {
+        const x2 = utils.round(
+          (this.width / this.resolution) * i + this.padding
+        );
+        const y2 = utils.round(
+          ((this.maxVal - val) / this.maxVal) * this.height + this.padding
+        );
+        const obj = {
+          x1: xLast > -1 ? xLast : x2,
+          y1: yLast > -1 ? yLast : y2,
+          x2,
+          y2,
+          rectX: x2 - tick / 2,
+          rectWidth: tick,
+          val,
+          index: i + this.resolution + 1,
+        };
 
-          xLast = x2;
-          yLast = y2;
-          return obj;
-        });
+        xLast = x2;
+        yLast = y2;
+        return obj;
+      });
     },
   },
   methods: {
@@ -106,7 +115,6 @@ export default {
   }
   g rect {
     pointer-events: all;
-    cursor: pointer;
 
     &:hover {
       + circle {

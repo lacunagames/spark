@@ -3,7 +3,7 @@
     <div class="modal-wrap">
       <div class="modal-backdrop" @click.self="close"></div>
       <div class="modal" :class="classes" @keydown.esc="close">
-        <header>
+        <header class="modal-header">
           <slot name="header">
             <h2>Modal</h2>
           </slot>
@@ -12,11 +12,11 @@
           </button>
         </header>
 
-        <section class="body">
+        <section class="modal-body">
           <slot name="body"></slot>
         </section>
 
-        <footer v-if="$slots.footer">
+        <footer class="modal-footer" v-if="$slots.footer">
           <slot name="footer"></slot>
         </footer>
       </div>
@@ -89,6 +89,7 @@ export default {
 }
 
 .modal-backdrop {
+  cursor: pointer;
   position: absolute;
   top: 0;
   bottom: 0;
@@ -108,12 +109,12 @@ export default {
   width: 500px;
   z-index: 2;
 
-  header,
-  footer {
+  .modal-header,
+  .modal-footer {
     padding: 15px;
     display: flex;
   }
-  header {
+  .modal-header {
     border-bottom: 1px solid #c8c29b;
     color: #4aae9b;
     justify-content: space-between;
@@ -135,7 +136,7 @@ export default {
     justify-content: flex-end;
   }
 
-  .body {
+  .modal-body {
     position: relative;
     padding: 20px 10px;
   }
@@ -154,7 +155,7 @@ export default {
   margin: 0 0 0 auto;
   border-radius: 1px 0 0 1px;
 
-  header {
+  .modal-header {
     position: absolute;
     padding-top: 25px;
     width: 100%;
@@ -172,7 +173,7 @@ export default {
     }
   }
 
-  .body {
+  .modal-body {
     height: 100%;
     overflow: auto;
   }

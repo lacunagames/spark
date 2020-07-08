@@ -7,12 +7,12 @@
             v-for="conn in connections"
             :key="conn.id"
             :class="{
-            static: true,
-            positive: conn.isPositive,
-            negative: conn.isNegative,
-            visible: conn.isVisible,
-            modify: conn.isModify,
-          }"
+              static: true,
+              positive: conn.isPositive,
+              negative: conn.isNegative,
+              visible: conn.isVisible,
+              modify: conn.isModify,
+            }"
           >
             <line
               class="static"
@@ -21,7 +21,12 @@
               :x2="conn.x2 + '%'"
               :y2="conn.y2 + '%'"
             />
-            <line :x1="conn.x1 + '%'" :y1="conn.y1 + '%'" :x2="conn.x2 + '%'" :y2="conn.y2 + '%'" />
+            <line
+              :x1="conn.x1 + '%'"
+              :y1="conn.y1 + '%'"
+              :x2="conn.x2 + '%'"
+              :y2="conn.y2 + '%'"
+            />
           </g>
         </svg>
       </li>
@@ -41,7 +46,11 @@
           <span class="population" :class="`icon-${civ.id}`">
             <span
               :class="`icon-${civ.id}`"
-              :style="{ height: Math.floor(100 - (civ.population / civ.maxPopulation) * 100) + '%' }"
+              :style="{
+                height:
+                  Math.floor(100 - (civ.population / civ.maxPopulation) * 100) +
+                  '%',
+              }"
             ></span>
           </span>
           <CircleMeter
@@ -69,25 +78,69 @@
           <span>(Level {{ selectedCiv.level }})</span>
         </h2>
         <p class="desc">{{ selectedCiv.desc }}</p>
-        <Graph :data="selectedCiv.popLog" :dataMax="selectedCiv.maxPopulation" title="Population" />
-        <div class="history">
-          <h3>History</h3>
-          <ol>
-            <li v-for="item in civLog" :key="item.id" :class="{turn: item.isTurnItem}">
-              <span v-if="item.icon" :class="`icon icon-${item.icon}`"></span>
-              {{ item.text }}
-            </li>
-          </ol>
+        <Graph
+          :data="selectedCiv.popLog"
+          :dataMax="selectedCiv.maxPopulation"
+          title="Population"
+        />
+        <div class="left-info">
+          <div class="techs">
+            <h3>Techs</h3>
+          </div>
         </div>
-        <div class="boons">
-          <h3>Boons</h3>
-          <ol>
-            <li v-for="item in boonList" :key="item.id">
-              <span :class="`icon icon-${item.icon || item.id}`"></span>
-              <h4>{{ item.title }}</h4>
-              <p>{{ item.desc }}</p>
-            </li>
-          </ol>
+        <div class="right-info">
+          <Tabs :tabList="['Boons', 'History']">
+            <template #Boons>
+              <div class="boons">
+                <ol>
+                  <li v-for="item in boonList" :key="item.id">
+                    <span :class="`icon icon-${item.icon || item.id}`"></span>
+                    <button
+                      v-if="item.hasRemove"
+                      type="button"
+                      class="close"
+                      :title="`Remove for ${item.removeCost} mana`"
+                      @click="
+                        gameAction('modifyBoon', item.id, [
+                          { id: selectedCiv.id, type: 'disconnect' },
+                        ])
+                      "
+                    >
+                      <span class="access">Remove boon</span>✕
+                    </button>
+                    <h4>{{ item.title }}</h4>
+                    <p>{{ item.desc }}</p>
+                    <div class="duration">
+                      {{
+                        item.civDuration > -1
+                          ? item.civDuration > 1
+                            ? item.civDuration + ' turns left'
+                            : 'Last turn'
+                          : 'Permanent'
+                      }}
+                    </div>
+                  </li>
+                </ol>
+              </div>
+            </template>
+            <template #History>
+              <div class="history">
+                <ol>
+                  <li
+                    v-for="item in civLog"
+                    :key="item.id"
+                    :class="{ turn: item.isTurnItem }"
+                  >
+                    <span
+                      v-if="item.icon"
+                      :class="`icon icon-${item.icon}`"
+                    ></span>
+                    {{ item.text }}
+                  </li>
+                </ol>
+              </div>
+            </template>
+          </Tabs>
         </div>
       </template>
     </Modal>
@@ -98,6 +151,7 @@
 import CircleMeter from '@/components/CircleMeter';
 import Modal from '@/components/Modal';
 import Graph from '@/components/Graph';
+import Tabs from '@/components/Tabs';
 
 export default {
   name: 'CivUI',
@@ -105,6 +159,7 @@ export default {
     CircleMeter,
     Modal,
     Graph,
+    Tabs,
   },
   props: {
     hovered: String,
@@ -127,6 +182,24 @@ export default {
     civs() {
       return this.$store.getters.civs;
     },
+    boonList() {
+      return this.$store.getters.civs.boons
+        .filter(boon => boon.civs.includes(this.selectedCiv.id))
+        .map(boon => {
+          const hasRemove = !!this.$store.getters.spark.skills.find(
+            skill => skill.isActive && skill.id === boon.skill
+          );
+          return {
+            ...boon,
+            civDuration: boon.durations[boon.civs.indexOf(this.selectedCiv.id)],
+            hasRemove,
+            removeCost: this.gameAction('getManaCost', {
+              boonId: boon.id,
+              civChanges: [{ id: this.selectedCiv.id, type: 'disconnect' }],
+            }),
+          };
+        });
+    },
     connections() {
       const world = this.$store.getters.world;
       const civs = this.$store.getters.civs;
@@ -137,6 +210,8 @@ export default {
 
         civ.connect?.forEach(discId => {
           const disc = world.discs.find(disc => disc.id === discId);
+
+          if (disc.type === 'knowledge') return;
 
           disc.modifyDisc?.forEach(mod => {
             const otherDisc = world.discs.find(disc => disc.id === mod.disc);
@@ -175,13 +250,11 @@ export default {
       });
       return connections;
     },
-    boonList() {
-      return this.selectedCiv?.boons.map(boonId =>
-        this.$store.getters.civs.allBoons.find(boon => boon.id === boonId)
-      );
-    },
     civLog() {
       if (!this.selectedCiv) return [];
+      {
+        this.$store.getters.world.log; // to trigger value update on log change
+      }
       return this.gameAction('getFilteredLog', {
         civ: this.selectedCiv.id,
         order: 'desc',
@@ -345,13 +418,13 @@ export default {
 }
 
 .civ-modal {
-  header {
+  .modal-header {
     padding: 0;
     h2 {
       display: none;
     }
   }
-  .body {
+  .modal-body {
     padding: 20px;
     display: grid;
     grid-template-columns: 80px auto 50%;
@@ -361,7 +434,7 @@ export default {
       'icon title title'
       'icon desc desc'
       'graph graph graph'
-      'boons boons history';
+      'left-info left-info right-info';
   }
   .civ-icon {
     display: inline-block;
@@ -394,19 +467,24 @@ export default {
     padding: 20px;
     line-height: 0;
   }
+  .left-info,
+  .right-info {
+    overflow: hidden;
+    grid-area: left-info;
+  }
+  .right-info {
+    grid-area: right-info;
+  }
   .history,
   .boons {
     background-color: $cBgLightest;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    h3 {
-      padding-left: 8px;
-      margin-bottom: 5px;
-    }
+    height: 100%;
+    overflow: auto;
+
     ol {
       margin: 0;
-      overflow: auto;
     }
     .icon {
       position: absolute;
@@ -432,8 +510,6 @@ export default {
     }
   }
   .history {
-    grid-area: history;
-
     .turn {
       padding-left: 8px;
       text-transform: uppercase;
@@ -441,22 +517,20 @@ export default {
     }
   }
   .boons {
-    grid-area: boons;
-
+    padding: 10px 0;
     ol {
       height: 100%;
     }
     li {
-      flex-direction: column;
-      align-items: flex-start;
-      height: 50px;
-      padding-left: 55px;
+      display: block;
+      height: 68px;
+      padding-left: 60px;
     }
     .icon {
-      top: 5px;
+      top: 11px;
       left: 8px;
-      width: 40px;
-      height: 40px;
+      width: 45px;
+      height: 45px;
     }
     h3 {
       margin-bottom: 10px;
@@ -470,6 +544,19 @@ export default {
     p {
       font-size: 14px;
       margin-bottom: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .duration {
+      font-size: 14px;
+      line-height: 21px;
+    }
+    .close {
+      position: relative;
+      top: 0;
+      right: -5px;
+      float: right;
     }
   }
 }

@@ -8,7 +8,11 @@
         <h2 class="h3">Turn {{ turn }}</h2>
         <ul>
           <li v-for="item in logItems" :key="item.index">
-            <a href="#" @click.prevent="$emit('openLink', item)" :class="{ disabled: !item.link }">
+            <a
+              href="#"
+              @click.prevent="$emit('openLink', item)"
+              :class="{ disabled: !item.link }"
+            >
               <span v-if="item.icon" :class="`icon icon-${item.icon}`"></span>
               {{ item.text }}
             </a>
@@ -19,13 +23,18 @@
     <div class="messages">
       <transition-group name="msg" tag="ul">
         <li v-for="msg in messages" :key="msg.id">
-          <span :class="msg.type" @click.once="gameAction('clearMessage', msg.id)">{{ msg.text }}</span>
+          <span
+            :class="msg.type"
+            @click.once="gameAction('clearMessage', msg.id)"
+            >{{ msg.text }}</span
+          >
         </li>
         <li v-if="errorMessage" :key="errorMessage.id" class="system-error">
           <span
             class="error"
             @click.once="gameAction('clearMessage', errorMessage.id)"
-          >{{ errorMessage.text }}</span>
+            >{{ errorMessage.text }}</span
+          >
         </li>
       </transition-group>
     </div>

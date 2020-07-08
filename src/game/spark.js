@@ -2,20 +2,34 @@ import StateHandler from './statehandler';
 import allSkills from './data/skills';
 import allSpells from './data/spells';
 import allDiscs from './data/discs';
+import { allBoons } from './data/civList';
+import allTechs from './data/civTech';
+import utils from '@/game/utils';
 
 const defaultState = {
   skills: allSkills.map(skill => ({ ...skill, isDisabled: !skill.isStarter })),
-  skillPoints: 111,
+  skillPoints: 8,
   level: 1,
+
+  spellDiscounts: {},
+  spells: [],
+
   xpToLevel: 12,
   xp: 0,
+  xpNextTurn: 0,
+
   mana: 10,
   maxMana: 15,
   manaPerTurn: 3,
-  manaCharges: 0,
+  manaToXpMultiplier: 0.2,
+
+  manaCharges: 1,
+  maxManaCharges: 3,
   manaChargeSkills: [],
-  spellDiscounts: {},
-  spells: [],
+  manaChargeStep: 0,
+  manaChargeMaxStep: 10,
+  manaToChargeMultiplier: 0.1,
+  chargeToMana: 15,
 };
 
 class Spark extends StateHandler {
@@ -27,16 +41,19 @@ class Spark extends StateHandler {
   }
 
   sparkTurn() {
+    const xpThisTurn = utils.round(this.state.xpNextTurn);
+    let hasLeveled = false;
     const newMana = Math.min(
       this.state.maxMana,
       this.state.mana + this.state.manaPerTurn
     );
 
-    this.setState({ mana: newMana, xp: this.state.xp + 2 });
-    this.checkLevelUp();
-  }
+    this.setState({
+      mana: this.state.mana > this.state.maxMana ? this.state.mana : newMana,
+      xp: this.state.xp + this.state.xpNextTurn,
+      xpNextTurn: 0,
+    });
 
-  checkLevelUp() {
     while (this.state.xp >= this.state.xpToLevel) {
       this.setState({
         xp: this.state.xp - this.state.xpToLevel,
@@ -48,25 +65,102 @@ class Spark extends StateHandler {
         type: 'sparkLevelUp',
         level: this.state.level,
       });
+      hasLeveled = true;
+    }
+    if (!hasLeveled && xpThisTurn) {
+      this.world.logEvent({
+        type: 'sparkXpGained',
+        xpThisTurn,
+      });
     }
   }
 
-  getManaCost({ disc, isActive, civChanges }) {
-    let mana = isActive ? 0 : disc.mana;
-    const addCivMana = disc.addCivMana || disc.mana * 0.7;
-    const removeCivMana = disc.removeCivMana || disc.mana * 0.7;
+  getManaCost({ discId, boonId, isActive, civChanges }) {
+    const disc =
+      this.world.state.discs.find(disc => disc.id === discId) ||
+      this.state.spells.find(disc => disc.id === discId);
+    const boon =
+      this.civs.state.boons.find(boon => boon.id === boonId) ||
+      this.state.spells.find(boon => boon.id === boonId);
+    let mana = isActive
+      ? 0
+      : disc?.mana || (!civChanges.length && boon?.mana) || 0;
+    const addCivMana = disc
+      ? disc.addCivMana || disc.mana * 0.7
+      : boon.addCivMana || boon.mana;
+    const removeCivMana = disc
+      ? disc.removeCivMana || disc.mana * 0.7
+      : boon.removeCivMana || boon.mana;
 
-    civChanges.forEach(
-      change => (mana += change.type === 'connect' ? addCivMana : removeCivMana)
-    );
-    if (!isActive && civChanges.length) {
+    civChanges.forEach(change => {
+      const currentDur =
+        boon?.durations?.[boon?.civs?.indexOf(change.id)] || boon?.duration;
+      mana +=
+        change.type === 'connect'
+          ? addCivMana
+          : boon?.duration
+          ? (currentDur / boon.duration) * removeCivMana
+          : removeCivMana;
+    });
+    if (disc && !isActive && civChanges.length) {
       mana -= addCivMana;
     }
-    return mana * (this.state.spellDiscounts[disc.category] || 1);
+    mana *= this.state.spellDiscounts[disc?.category || boon?.category] || 1;
+    return utils.round(mana, 0);
+  }
+
+  updateManaCharges(manaCost, category) {
+    if (this.state.manaChargeSkills.includes(category)) {
+      this.setState({
+        manaChargeStep:
+          this.state.manaChargeStep +
+          utils.round(manaCost * this.state.manaToChargeMultiplier, 2),
+      });
+    }
+    if (this.state.manaChargeStep >= this.state.manaChargeMaxStep) {
+      const oldCharges = this.state.manaCharges;
+      this.setState({
+        manaCharges:
+          this.state.manaCharges +
+          Math.floor(this.state.manaChargeStep / this.state.manaChargeMaxStep),
+        manaChargeStep:
+          this.state.manaChargeStep % this.state.manaChargeMaxStep,
+      });
+      if (this.state.manaCharges > this.state.maxManaCharges) {
+        this.popManaCharge(this.state.manaCharges - this.state.maxManaCharges);
+      }
+      if (oldCharges < this.state.manaCharges) {
+        this.system.showMessage({
+          type: 'newManaCharge',
+          count: this.state.manaCharges - oldCharges,
+        });
+      }
+    }
+  }
+
+  popManaCharge(popCount = 1) {
+    if (this.state.manaCharges >= popCount) {
+      this.setState({
+        mana: this.state.mana + this.state.chargeToMana * popCount,
+        manaCharges: this.state.manaCharges - popCount,
+      });
+      this.system.showMessage({
+        type: 'sparkManaGained',
+        amount: this.state.chargeToMana * popCount,
+      });
+    }
   }
 
   castSpell(spellId, civs) {
     const spell = this.state.spells.find(spell => spell.id === spellId);
+
+    if (spell.type === 'boon') {
+      return this.modifyBoon(
+        spellId,
+        civs.map(id => ({ id, type: 'connect' }))
+      );
+    }
+
     const createDiscId = spell.createDisc || spell.id;
     const civsTitle = this.civs.state.civList
       .filter(civ => civs.includes(civ.id))
@@ -74,7 +168,7 @@ class Spark extends StateHandler {
       .join(', ');
     const manaCost = this.getManaCost({
       isActive: false,
-      disc: spell,
+      discId: spell.id,
       civChanges: civs.map(civ => ({ type: 'connect', id: civ })),
     });
 
@@ -89,7 +183,12 @@ class Spark extends StateHandler {
     if (this.world.state.discs.find(disc => disc.id === createDiscId))
       return false;
 
-    this.setState({ mana: this.state.mana - manaCost });
+    this.setState({
+      mana: this.state.mana - manaCost,
+      xpNextTurn:
+        this.state.xpNextTurn +
+        utils.round(manaCost * this.state.manaToXpMultiplier, 2),
+    });
     this.world.createDisc(createDiscId, civs);
     this.system.showMessage({
       type: 'sparkSpell',
@@ -97,6 +196,55 @@ class Spark extends StateHandler {
       civs: civsTitle,
     });
     this.world.logEvent({ type: 'sparkSpell', disc: createDiscId, civs });
+    this.updateManaCharges(manaCost, spell.category);
+    return true;
+  }
+
+  modifyBoon(boonId, civChanges) {
+    const boon =
+      this.civs.state.boons.find(boon => boon.id === boonId) ||
+      allBoons.find(boon => boon.id === boonId);
+    const manaCost = this.getManaCost({ boonId, civChanges });
+
+    if (
+      !boon ||
+      !this.state.skills.find(
+        skill => skill.id === boon.skill && skill.isActive
+      )
+    ) {
+      return false;
+    }
+
+    if (manaCost > this.state.mana) {
+      this.system.showMessage({ type: 'notEnoughMana' });
+      return false;
+    }
+    if (civChanges.length === 0) {
+      this.system.showMessage({ type: 'noCivChanges' });
+      return false;
+    }
+    civChanges.forEach(change => {
+      this.civs[change.type === 'connect' ? 'addBoon' : 'removeBoon'](
+        boonId,
+        change.id
+      );
+    });
+    this.setState({
+      mana: this.state.mana - manaCost,
+      xpNextTurn:
+        this.state.xpNextTurn +
+        utils.round(manaCost * this.state.manaToXpMultiplier, 2),
+    });
+    let log = this.world.logEvent({
+      type: 'modifyBoon',
+      boon: boonId,
+      civChanges,
+    });
+    this.system.showMessage({
+      type: 'modifyBoon',
+      text: log.text,
+    });
+    this.updateManaCharges(manaCost, boon.category);
     return true;
   }
 
@@ -110,7 +258,7 @@ class Spark extends StateHandler {
         );
         return !removing && civ.connect.includes(discId);
       }).length === 0;
-    const manaCost = this.getManaCost({ disc, isActive: true, civChanges });
+    const manaCost = this.getManaCost({ discId, isActive: true, civChanges });
 
     if (manaCost > this.state.mana) {
       this.system.showMessage({ type: 'notEnoughMana' });
@@ -131,7 +279,12 @@ class Spark extends StateHandler {
             : civ.connect.filter(conn => conn !== discId),
       });
     });
-    this.setState({ mana: this.state.mana - manaCost });
+    this.setState({
+      mana: this.state.mana - manaCost,
+      xpNextTurn:
+        this.state.xpNextTurn +
+        utils.round(manaCost * this.state.manaToXpMultiplier, 2),
+    });
     if (isRemove) {
       this.system.showMessage({ type: 'removeDisc', title: disc.title });
       this.world.logEvent({ type: 'removeDisc', disc: discId, civChanges });
@@ -140,6 +293,7 @@ class Spark extends StateHandler {
       this.system.showMessage({ type: 'modifyDisc', title: disc.title });
       this.world.logEvent({ type: 'modifyDisc', disc: discId, civChanges });
     }
+    this.updateManaCharges(manaCost, disc.category);
     return true;
   }
 
@@ -212,7 +366,7 @@ class Spark extends StateHandler {
       });
 
       const newSpells = [];
-      [...allSpells, ...allDiscs].forEach(spell => {
+      [...allSpells, ...allDiscs, ...allBoons, ...allTechs].forEach(spell => {
         if (spell.skill === skillId) {
           newSpells.push(spell);
         }

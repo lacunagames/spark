@@ -2,7 +2,7 @@
   <div class="world">
     <ul class="discs">
       <li
-        v-for="disc in NoTechDiscs"
+        v-for="disc in realDiscs"
         :key="disc.id"
         :class="disc.type"
         :style="{
@@ -63,9 +63,9 @@ export default {
     world() {
       return this.$store.getters.world;
     },
-    NoTechDiscs() {
+    realDiscs() {
       return this.$store.getters.world.discs.filter(
-        disc => disc.type !== 'knowledge'
+        disc => !['knowledge', 'boon'].includes(disc.type)
       );
     },
   },

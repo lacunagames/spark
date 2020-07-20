@@ -73,16 +73,58 @@ class World extends StateHandler {
 
     this.state = {};
     this.setState(defaultState);
-    this.initIndexes('biome', 'action', 'knowledge', 'event');
-    this.initWorld();
+    this.initIndexes('biome', 'action', 'knowledge', 'event', 'boon');
+    setTimeout(() => this.initWorld());
   }
 
-  initWorld() {}
+  initWorld() {
+    const biomes = allDiscs.filter(disc => disc.type === 'biome');
+    let biomeId;
+    for (let i = 0; i < 5; i++) {
+      biomeId = biomes[Math.floor(Math.random() * biomes.length)]?.id;
+      this.createDisc(biomeId);
+    }
+  }
 
   nextTurn() {
     this.setState({
       turn: this.state.turn + 1,
       log: [...this.state.log, { id: this.state.turn + 1, items: [] }],
+    });
+
+    this.state.discs.forEach(disc => {
+      if (disc.durations) {
+        const durations = Object.keys(disc.durations).reduce(
+          (obj, civId) => ({
+            ...obj,
+            [civId]:
+              disc.durations[civId] > 0
+                ? disc.durations[civId] - 1
+                : disc.durations[civId],
+          }),
+          {}
+        );
+        this._updateStateObj('discs', disc.id, { durations });
+        Object.keys(durations).forEach(civId => {
+          if (durations[civId] === 0) {
+            if (!disc.skipLog) {
+              this.logEvent({
+                type: 'civLostBoon',
+                discId: disc.id,
+                civId: civId,
+              });
+            }
+            this.civs.disconnectDisc(civId, disc.id);
+            this.checkDiscRemove([disc]);
+            if (disc.onExpire) {
+              this.executeActions({
+                actions: disc.onExpire,
+                civId,
+              });
+            }
+          }
+        });
+      }
     });
 
     this.civs.civTurn();
@@ -102,79 +144,121 @@ class World extends StateHandler {
         .map(disc => disc.id);
       const randomDanger =
         dangerDiscs[Math.floor(Math.random() * dangerDiscs.length)];
-      this.createDisc(
-        randomDanger,
-        this.civs.state.civList.map(civ => civ.id)
+
+      this.civs.state.civList.forEach(civ =>
+        this.createDisc(randomDanger, civ.id)
       );
       this.logEvent({
         type: 'dangerAppeared',
-        disc: randomDanger,
-        civs: this.civs.state.civList.map(civ => civ.id),
+        discId: randomDanger,
+        civIds: this.civs.state.civList.map(civ => civ.id),
       });
     }
   }
 
-  createDisc(discId, civIds) {
-    const disc = [...allDiscs, ...allTechs].find(disc => disc.id === discId);
-    civIds = Array.isArray(civIds) ? civIds : [civIds];
-    const upgraded = this.state.discs.find(disc =>
-      disc.upgrades?.includes(discId)
+  createDisc(discId, civId) {
+    let disc =
+      this.state.discs.find(disc => disc.id === discId) ||
+      this.state.allDisclike.find(disc => disc.id === discId);
+    const civ = this.civs.state.civList.find(civ => civ.id === civId);
+    const isUpgraded = this.state.discs.find(
+      disc => disc.upgrades?.includes(discId) && civ?.connect.includes(disc.id)
     );
 
-    if (
-      upgraded &&
-      civIds.every(civId =>
-        this.civs.state.civList
-          .find(civ => civ.id === civId)
-          ?.connect.includes(upgraded.id)
-      )
-    ) {
+    if (civ?.connect.includes(discId) || isUpgraded) {
       return false;
     }
+
     [...(disc.upgrades || []), ...(disc.removes || [])].forEach(upgradeMe => {
+      if (civ?.connect.includes(upgradeMe))
+        this.civs.disconnectDisc(civId, upgradeMe);
       if (
-        this.civs.state.civList.every(
-          civ => civ.connect.includes(upgradeMe) === civIds.includes(civ.id)
-        )
-      )
+        !this.civs.state.civList.some(civ => civ.connect.includes(upgradeMe))
+      ) {
         this.removeDisc(upgradeMe);
+      }
     });
 
-    if (!this.state.discs.find(disc => disc.id === discId)) {
+    if (disc.duration && !disc.durations) {
+      disc = { ...disc, durations: { [civId]: disc.duration } };
+    }
+
+    if (disc.isDiscovery) {
+      const availableTechs = allTechs.filter(
+        tech =>
+          tech.level <= civ.level &&
+          !civ.connect.includes(tech.id) &&
+          !tech.requires?.some(reqId => !civ.connect.includes(reqId))
+      );
+      const randomTech =
+        availableTechs[Math.floor(Math.random() * availableTechs.length)];
+
+      disc = {
+        ...disc,
+        id: `${disc.id}|${civ.id}`,
+        isHidden: true,
+      };
+      if (civ.tech >= 10 && randomTech) {
+        this.civs._updateStateObj('civList', civId, {
+          tech: civ.tech - 10,
+        });
+        disc = {
+          ...disc,
+          title: `${disc.title}: ${randomTech.title}`,
+          desc: `${disc.desc}: ${randomTech.title}.`,
+          onExpire: [
+            { createDisc: randomTech.id, skipMessage: true },
+            ...(disc.onExpire || []),
+          ],
+          durations: {
+            [civId]: Math.ceil(
+              (disc.duration * 2 * randomTech.level) /
+                (civ.tech > 29 ? Math.floor((civ.tech - 10) / 10) : 1)
+            ),
+          },
+          isHidden: false,
+        };
+      }
+    }
+
+    if (typeof disc.index !== 'number') {
       this.setState({
         discs: [
           ...this.state.discs,
           { ...disc, index: this.useIndex(disc.type) },
         ],
       });
+    } else if (disc.duration) {
+      this._updateStateObj('discs', disc.id, {
+        durations: { ...disc.durations, [civId]: disc.duration },
+      });
     }
-    this.civs.state.civList.forEach(civ => {
-      if (civIds.includes(civ.id) && !civ.connect.includes(upgraded?.id)) {
-        this.civs.connectDisc(civ.id, discId);
-        [...(disc.upgrades || []), ...(disc.removes || [])].forEach(
-          upgradeMe => {
-            if (civ.connect.includes(upgradeMe))
-              this.civs.disconnectDisc(civ.id, upgradeMe);
-          }
-        );
-      }
-    });
+    if (civId) {
+      this.civs.connectDisc(civId, disc.id);
+    }
     return this.state.discs.find(disc => disc.id === discId);
   }
 
   removeDisc(discId) {
     const disc = this.state.discs.find(disc => disc.id === discId);
 
-    this.civs.state.civList.forEach(
-      civ =>
-        civ.connect.includes(discId) && this.civs.disconnectDisc(civ.id, discId)
-    );
+    if (!disc) {
+      return;
+    }
+    this.civs.state.civList.forEach(civ => {
+      if (civ.connect.includes(discId)) {
+        this.civs.disconnectDisc(civ.id, discId);
+      }
+    });
     this.clearIndex(disc.type, disc.index);
     this._removeStateObj('discs', disc.id);
   }
 
-  checkDiscRemove() {
-    this.state.discs.forEach(disc => {
+  checkDiscRemove(checkDisc = this.state.discs) {
+    checkDisc.forEach(disc => {
+      if (['biome'].includes(disc.type)) {
+        return;
+      }
       const isConnected = this.civs.state.civList.some(civ =>
         civ.connect?.includes(disc.id)
       );
@@ -187,21 +271,37 @@ class World extends StateHandler {
 
   executeActions({ actions, civId }) {
     actions.forEach(action => {
-      if (action.createRandomBoon) {
-        const boonId =
-          action.createRandomBoon[
-            Math.floor(Math.random() * action.createRandomBoon.length)
-          ];
-        this.civs.addBoon(boonId, civId);
-        let log = this.logEvent({
-          type: 'boonAdded',
-          boon: boonId,
-          civChanges: [{ id: civId, type: 'connect' }],
-        });
-        this.system.showMessage({
-          type: 'boonAdded',
-          text: log.text,
-        });
+      if (action.createRandomDisc || action.createDisc) {
+        const discId =
+          action.createRandomDisc?.[
+            Math.floor(Math.random() * action.createRandomDisc.length)
+          ] || action.createDisc;
+        const disc = this.createDisc(discId, civId);
+        if (!action.skipLog && disc) {
+          let log = this.logEvent({
+            type: disc.type === 'boon' ? 'boonAdded' : 'discCreated',
+            discId: disc.id,
+            civChanges: [{ id: civId, type: 'connect' }],
+            civId,
+          });
+          if (!action.skipMessage) {
+            this.system.showMessage(log);
+          }
+        }
+      }
+      if (action.addStat) {
+        const civ = this.civs.state.civList.find(civ => civ.id === civId);
+        this.civs._updateStateObj(
+          'civList',
+          civId,
+          Object.keys(action.addStat).reduce(
+            (obj, key) => ({
+              ...obj,
+              [key]: civ[key] + action.addStat[key],
+            }),
+            {}
+          )
+        );
       }
     });
   }
@@ -209,33 +309,24 @@ class World extends StateHandler {
   logEvent({ type, ...args }) {
     const getDynamic = (
       type,
-      { disc, civ, civs, level, skill, civChanges, xpThisTurn, boon }
+      { discId, civId, civIds, level, skillId, civChanges, xpThisTurn, spellId }
     ) => {
-      const discTitle = this.state.discs.find(discFind => discFind.id === disc)
-        ?.title;
+      discId = discId?.split('|')[0];
+      const discTitle = this.state.allDisclike.find(
+        discFind => discFind.id === discId
+      )?.title;
       const civsTitle =
-        civs &&
+        civIds &&
         this.civs.state.civList
-          .filter(civ => civs.includes(civ.id))
+          .filter(civ => civIds.includes(civ.id))
           .map(civ => civ.title)
           .join(', ');
-      const boonTitle = allBoons.find(boonFind => boonFind.id === boon)?.title;
-      const civTitle = this.civs.state.civList.find(
-        civFind => civFind.id === civ
-      )?.title;
+      const civTitle =
+        civId &&
+        this.civs.state.civList.find(civFind => civFind.id === civId)?.title;
       const skillTitle = this.spark.state.skills.find(
-        skillFind => skillFind.id === skill
+        skillFind => skillFind.id === skillId
       )?.title;
-      const civChangesTitle = civChanges
-        ?.map(change => {
-          const civTitle = this.civs.state.civList.find(
-            civ => civ.id === change.id
-          ).title;
-          return `${civTitle} have been ${
-            change.type === 'connect' ? 'connected' : 'disconnected'
-          }`;
-        })
-        .join(', ');
       const getCivList = type =>
         civChanges
           ?.filter(change => change.type === type)
@@ -246,36 +337,53 @@ class World extends StateHandler {
           .join(', ');
       const connectCivList = getCivList('connect');
       const disconnectCivList = getCivList('disconnect');
+      const spellTitle =
+        spellId &&
+        this.spark.state.spells.find(spell => spell.id === spellId)?.title;
       let text;
 
       switch (type) {
         case 'dangerAppeared':
           return {
-            text: `${discTitle} appeared for ${civsTitle}.`,
-            icon: disc,
+            text: `${discTitle} appeared for ${civTitle || civsTitle}.`,
+            icon: discId,
+            link: 'disc',
+          };
+        case 'discCreated':
+          return {
+            text: `${discTitle} appeared for ${civTitle || civsTitle}.`,
+            icon: discId,
             link: 'disc',
           };
         case 'civLevelUp':
           return {
             text: `${civTitle} reached level ${level}.`,
-            icon: civ,
+            icon: civId,
             link: 'civ',
           };
         case 'civAction':
           return {
             text: `${discTitle} connected by ${civTitle}.`,
-            icon: disc,
+            icon: discId,
             link: 'disc',
+          };
+        case 'civCreated':
+          return {
+            text: `${civTitle} have been created.`,
+            icon: civId,
+            link: 'civ',
           };
         case 'civDied':
           return {
             text: `${civTitle} went extinct.`,
-            icon: civ,
+            icon: civId,
           };
         case 'sparkSpell':
           return {
-            text: `You created ${discTitle} for ${civsTitle}.`,
-            icon: disc,
+            text: `You cast ${spellTitle}${
+              civTitle || civsTitle ? ' for ' + civTitle || civsTitle : ''
+            }.`,
+            icon: spellId,
             link: 'disc',
           };
         case 'sparkLevelUp':
@@ -287,7 +395,7 @@ class World extends StateHandler {
         case 'sparkSkillLearned':
           return {
             text: `You learnt ${skillTitle}.`,
-            icon: skill,
+            icon: skillId,
             link: 'skills',
           };
         case 'sparkXpGained':
@@ -298,42 +406,36 @@ class World extends StateHandler {
             icon: 'xp-gain',
             link: 'skills',
           };
-        case 'modifyDisc':
-          return {
-            text: `${discTitle} has been modified. ${civChangesTitle}.`,
-            icon: disc,
-            link: 'disc',
-          };
         case 'boonAdded':
           return {
-            text: `${boonTitle} has been added for ${connectCivList}.`,
-            icon: boon,
+            text: `${discTitle} has been added for ${connectCivList}.`,
+            icon: discId,
           };
-        case 'modifyBoon':
+        case 'modifyDisc':
           text = connectCivList.length
-            ? `You cast ${boonTitle} for ${connectCivList}. `
+            ? `You cast ${discTitle} for ${connectCivList}. `
             : '';
           text += disconnectCivList.length
-            ? `You removed ${boonTitle} from ${disconnectCivList}.`
+            ? `You removed ${discTitle} from ${disconnectCivList}.`
             : '';
           return {
             text,
-            icon: boon,
+            icon: discId,
           };
         case 'removeDisc':
           return {
             text: `${discTitle} has been removed.`,
-            icon: disc,
+            icon: discId,
           };
         case 'civGainedBoon':
           return {
-            text: `${civTitle} have gained the ${boonTitle} boon.`,
-            icon: boon,
+            text: `${civTitle} have gained the ${discTitle} boon.`,
+            icon: discId,
           };
         case 'civLostBoon':
           return {
-            text: `${civTitle} have lost the ${boonTitle} boon.`,
-            icon: boon,
+            text: `${civTitle} have lost the ${discTitle} boon.`,
+            icon: discId,
           };
         default:
           return {
@@ -358,11 +460,11 @@ class World extends StateHandler {
   }
 
   getFilteredLog({
-    civ,
+    civId,
     fromTurn,
     toTurn,
     lastTurn,
-    disc,
+    discId,
     type,
     order = 'asc',
     insertTurn = false,
@@ -371,11 +473,11 @@ class World extends StateHandler {
     const method = order === 'asc' ? 'push' : 'unshift';
     const validItem = item => {
       return (
-        civ !== undefined &&
-        (item.civ === civ ||
-          item.civs?.includes(civ) ||
-          item.civChanges?.some(change => change.id === civ) ||
-          (disc !== undefined && item.disc === disc) ||
+        civId !== undefined &&
+        (item.civId === civId ||
+          item.civIds?.includes(civId) ||
+          item.civChanges?.some(change => change.id === civId) ||
+          (discId !== undefined && item.discId === discId) ||
           (type !== undefined &&
             type === 'spark' &&
             item.type.includes('spark')))

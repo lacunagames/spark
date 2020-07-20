@@ -47,9 +47,7 @@
             <span
               :class="`icon-${civ.id}`"
               :style="{
-                height:
-                  Math.floor(100 - (civ.population / civ.maxPopulation) * 100) +
-                  '%',
+                height: Math.floor(100 - (civ.pop / civ.maxPop) * 100) + '%',
               }"
             ></span>
           </span>
@@ -80,13 +78,36 @@
         <p class="desc">{{ selectedCiv.desc }}</p>
         <Graph
           :data="selectedCiv.popLog"
-          :dataMax="selectedCiv.maxPopulation"
+          :dataMax="selectedCiv.maxPop"
           title="Population"
         />
         <div class="left-info">
-          <div class="techs">
-            <h3>Techs</h3>
-          </div>
+          <Tabs :tabList="['Stats', 'Techs']">
+            <template #Stats>
+              <div class="stats">
+                <p>Xp: {{ selectedCiv.xp }} / {{ selectedCiv.xpToLevel }}</p>
+                <p>
+                  Action: {{ selectedCiv.action }} / {{ selectedCiv.maxAction }}
+                </p>
+                <p>Tech: {{ selectedCiv.tech }}</p>
+                <p>Military: {{ selectedCiv.military }}</p>
+                <p>Magic: {{ selectedCiv.magic }}</p>
+                <p>Commerce: {{ selectedCiv.commerce }}</p>
+                <p>Expand: {{ selectedCiv.expand }}</p>
+              </div>
+            </template>
+            <template #Techs>
+              <div class="techs">
+                <ol>
+                  <li v-for="item in techList" :key="item.id">
+                    <span :class="`icon icon-${item.icon || item.id}`"></span>
+                    <h4>{{ item.title }}</h4>
+                    <p>{{ item.desc }}</p>
+                  </li>
+                </ol>
+              </div>
+            </template>
+          </Tabs>
         </div>
         <div class="right-info">
           <Tabs :tabList="['Boons', 'History']">
@@ -98,15 +119,11 @@
                     <button
                       v-if="item.hasRemove"
                       type="button"
-                      class="close"
-                      :title="`Remove for ${item.removeCost} mana`"
-                      @click="
-                        gameAction('modifyBoon', item.id, [
-                          { id: selectedCiv.id, type: 'disconnect' },
-                        ])
-                      "
+                      class="close remove-boon"
+                      title="Remove boon"
+                      @click="gameAction('modifyDisc', item.id, selectedCiv.id)"
                     >
-                      <span class="access">Remove boon</span>✕
+                      <span class="mana">{{ item.removeCost }}</span> ✕
                     </button>
                     <h4>{{ item.title }}</h4>
                     <p>{{ item.desc }}</p>
@@ -126,6 +143,9 @@
             <template #History>
               <div class="history">
                 <ol>
+                  <li v-if="civLog.length === 0" class="empty">
+                    No items yet.
+                  </li>
                   <li
                     v-for="item in civLog"
                     :key="item.id"
@@ -183,22 +203,46 @@ export default {
       return this.$store.getters.civs;
     },
     boonList() {
-      return this.$store.getters.civs.boons
-        .filter(boon => boon.civs.includes(this.selectedCiv.id))
-        .map(boon => {
+      const civ = this.$store.getters.civs.civList.find(
+        civ => civ.id === this.selectedCiv?.id
+      );
+      if (!civ) return [];
+      return this.$store.getters.world.discs
+        .filter(
+          disc =>
+            disc.type === 'boon' &&
+            !disc.isHidden &&
+            civ.connect.includes(disc.id)
+        )
+        .map(disc => {
           const hasRemove = !!this.$store.getters.spark.skills.find(
-            skill => skill.isActive && skill.id === boon.skill
+            skill => skill.isActive && skill.id === disc.skill
           );
           return {
-            ...boon,
-            civDuration: boon.durations[boon.civs.indexOf(this.selectedCiv.id)],
+            ...disc,
+            civDuration: disc.durations?.[this.selectedCiv.id],
             hasRemove,
-            removeCost: this.gameAction('getManaCost', {
-              boonId: boon.id,
-              civChanges: [{ id: this.selectedCiv.id, type: 'disconnect' }],
-            }),
+            removeCost: this.gameAction(
+              'getManaCost',
+              disc.id,
+              this.selectedCiv.id
+            ),
           };
         });
+    },
+    techList() {
+      const civ = this.$store.getters.civs.civList.find(
+        civ => civ.id === this.selectedCiv?.id
+      );
+      if (!civ) return [];
+      return civ.connect
+        .map(discId =>
+          this.$store.getters.world.discs.find(
+            findDisc => findDisc.id === discId
+          )
+        )
+        .filter(disc => disc.type === 'knowledge' && !disc.isHidden)
+        .reverse();
     },
     connections() {
       const world = this.$store.getters.world;
@@ -211,7 +255,7 @@ export default {
         civ.connect?.forEach(discId => {
           const disc = world.discs.find(disc => disc.id === discId);
 
-          if (disc.type === 'knowledge') return;
+          if (['knowledge', 'boon'].includes(disc.type)) return;
 
           disc.modifyDisc?.forEach(mod => {
             const otherDisc = world.discs.find(disc => disc.id === mod.disc);
@@ -241,8 +285,11 @@ export default {
             y2: world.positions[disc.type][disc.index].top,
             isModify: false,
             isPositive:
-              disc.xpGrow > 0 || disc.popGrow > 0 || disc.actionGrow > 0,
-            isNegative: disc.popGrow < 0,
+              disc.turnGrow?.xp > 0 ||
+              disc.turnGrow?.pop > 0 ||
+              disc.turnGrow?.action > 0 ||
+              disc.turnGrow?.tech,
+            isNegative: disc.turnGrow?.pop < 0,
             isVisible: [civ.id, disc.id].includes(this.hovered),
             id: `${discId}-${civ.id}`,
           });
@@ -256,10 +303,17 @@ export default {
         this.$store.getters.world.log; // to trigger value update on log change
       }
       return this.gameAction('getFilteredLog', {
-        civ: this.selectedCiv.id,
+        civId: this.selectedCiv.id,
         order: 'desc',
         insertTurn: true,
       });
+    },
+  },
+  watch: {
+    boonList() {
+      this.selectedCiv = this.$store.getters.civs.civList.find(
+        civ => civ.id === this.selectedCiv?.id
+      );
     },
   },
   methods: {
@@ -476,7 +530,8 @@ export default {
     grid-area: right-info;
   }
   .history,
-  .boons {
+  .boons,
+  .techs {
     background-color: $cBgLightest;
     display: flex;
     flex-direction: column;
@@ -502,27 +557,32 @@ export default {
       height: 45px;
       position: relative;
       display: flex;
-      align-items: center;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
 
       &:not(:last-child) {
         border-bottom: 1px solid lighten($cBg, 20%);
       }
+    }
+    .empty {
+      padding: 30px 10px;
+      font-style: italic;
     }
   }
   .history {
     .turn {
       padding-left: 8px;
       text-transform: uppercase;
-      align-items: flex-end;
     }
   }
-  .boons {
+  .boons,
+  .techs {
     padding: 10px 0;
     ol {
       height: 100%;
     }
     li {
-      display: block;
       height: 68px;
       padding-left: 60px;
     }
@@ -544,9 +604,6 @@ export default {
     p {
       font-size: 14px;
       margin-bottom: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
     .duration {
       font-size: 14px;
@@ -557,7 +614,52 @@ export default {
       top: 0;
       right: -5px;
       float: right;
+      background: $cError;
+      border-radius: 100px;
+      padding: 4px 10px 4px 25px;
+      color: #fff;
+      font-size: 14px;
+      line-height: 16px;
+      height: auto;
+      overflow: hidden;
+
+      .mana {
+        font-size: 18px;
+        border-right: 1px solid lighten($cError, 10%);
+        padding-right: 5px;
+        margin-right: 3px;
+        &:before {
+          content: '';
+          position: absolute;
+          left: 4px;
+          top: 4px;
+          border-radius: 50px;
+          width: 12px;
+          height: 12px;
+          display: inline-block;
+          background: $cMana;
+          border: 2px solid lighten($cMana, 15%);
+        }
+      }
+
+      &:hover {
+        background-color: lighten($cError, 10%);
+      }
     }
+  }
+  .boons {
+    li {
+      display: block;
+    }
+    p {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+  .stats {
+    padding: 15px 10px;
+    font-size: 18px;
   }
 }
 </style>

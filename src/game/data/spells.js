@@ -6,6 +6,7 @@ const spells = [
     category: 'fire',
     mana: 10,
     desc: 'Bla bla something',
+    type: 'spell',
   },
   {
     id: 'flame-familiar',
@@ -14,6 +15,7 @@ const spells = [
     category: 'fire',
     mana: 10,
     desc: 'Bla bla something',
+    type: 'spell',
   },
   {
     id: 'lightning-strike',
@@ -22,6 +24,7 @@ const spells = [
     category: 'air',
     mana: 10,
     desc: 'Bla bla something',
+    type: 'spell',
   },
   {
     id: 'summon-whisperer',
@@ -30,6 +33,7 @@ const spells = [
     category: 'air',
     mana: 10,
     desc: 'Bla bla something',
+    type: 'spell',
   },
   {
     id: 'storm',
@@ -38,6 +42,7 @@ const spells = [
     category: 'water',
     mana: 10,
     desc: 'Bla bla something',
+    type: 'spell',
   },
   {
     id: 'stream-spirit',
@@ -46,6 +51,7 @@ const spells = [
     category: 'water',
     mana: 10,
     desc: 'Bla bla something',
+    type: 'spell',
   },
   {
     id: 'mud-golem',
@@ -54,6 +60,7 @@ const spells = [
     category: 'earth',
     mana: 10,
     desc: 'Bla bla something',
+    type: 'spell',
   },
 ];
 

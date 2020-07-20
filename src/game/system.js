@@ -7,13 +7,13 @@ const defaultState = {
 };
 
 const messageTypes = {
+  default: {
+    type: 'success',
+    msg: ({ text }) => text,
+  },
   skillLearned: {
     type: 'success',
     msg: ({ title }) => `You have learnt ${title}.`,
-  },
-  sparkSpell: {
-    type: 'success',
-    msg: ({ title, civs }) => `You cast ${title} for ${civs}.`,
   },
   skillAlreadyLearnt: {
     type: 'error',
@@ -38,22 +38,6 @@ const messageTypes = {
   noCivChanges: {
     type: 'error',
     msg: () => `Nothing to save.`,
-  },
-  modifyDisc: {
-    type: 'success',
-    msg: ({ title }) => `${title} has been modified.`,
-  },
-  boonAdded: {
-    type: 'success',
-    msg: ({ text }) => text,
-  },
-  modifyBoon: {
-    type: 'success',
-    msg: ({ text }) => text,
-  },
-  removeDisc: {
-    type: 'success',
-    msg: ({ title }) => `${title} has been removed.`,
   },
   newManaCharge: {
     type: 'success',
@@ -80,13 +64,13 @@ class System extends StateHandler {
       return;
     }
     const newMessage = {
-      ...messageTypes[type],
+      ...(messageTypes[type] || messageTypes.default),
       id: this.useIndex('msg'),
     };
     const isErr = newMessage.type === 'error';
 
     newMessage.text = newMessage.msg(args);
-    newMessage.duration = newMessage.duration || isErr ? 3 : 9;
+    newMessage.duration = newMessage.duration || isErr ? 3 : 6;
     if (isErr && this.state.errorMessage) {
       this.clearMessage(this.state.errorMessage.id);
     } else if (!isErr && this.state.messages.length > 2) {

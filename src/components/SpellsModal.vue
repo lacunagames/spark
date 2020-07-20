@@ -64,7 +64,6 @@ export default {
       isModalOpen: false,
       selectedSpellTab: 'all-spells',
       selectedSpell: undefined,
-      selectedCivs: [],
     };
   },
   computed: {
@@ -94,14 +93,9 @@ export default {
         )
         .map(spell => ({
           ...spell,
-          isActive:
-            spell.type === 'boon'
-              ? !!this.$store.getters.civs.boons.find(
-                  boon => boon.id === spell.id
-                )
-              : !!this.$store.getters.world.discs.find(
-                  disc => disc.id === spell.id
-                ),
+          isActive: !!this.$store.getters.world.discs.find(
+            disc => disc.id === spell.id
+          ),
         }));
     },
   },
@@ -123,7 +117,6 @@ export default {
       this.selectedSpellTab = id;
     },
     selectSpell(id) {
-      this.selectedCivs = [];
       this.selectedSpell = this.filteredSpells.find(spell => spell.id === id);
     },
   },
@@ -180,11 +173,14 @@ export default {
     a {
       display: block;
       color: $cText;
-      padding: 10px;
+      padding: 20px 10px;
       font-size: 18px;
-      line-height: 14px;
+      line-height: 18px;
       background-color: #eee8c5;
       transition: background-color $animFast;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
 
       &:hover,
       &:focus {
@@ -202,7 +198,7 @@ export default {
       height: 44px;
       border-radius: 4px;
       background-size: cover;
-      margin-right: 15px;
+      margin: -15px 10px -17px 0;
       border: 2px solid #ccc;
       background-color: darken($cBg, 30%);
     }
@@ -215,8 +211,6 @@ export default {
       }
     }
     .title {
-      position: relative;
-      bottom: 15px;
       text-transform: capitalize;
     }
   }

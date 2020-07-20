@@ -186,7 +186,7 @@ export default {
       width: 20px;
       height: 20px;
       background-color: #8235d5;
-      border: 2px solid #5204a7;
+      border: 2px solid $cMana;
       border-radius: 333px;
       position: absolute;
       top: -75px;

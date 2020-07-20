@@ -5,24 +5,18 @@
       <span class="text">{{ spell.title }}</span>
     </h2>
     <p class="spell-desc">{{ spell.desc }}</p>
-    <p
-      v-if="spell.duration"
-    >Duration: {{ spell.duration }} {{ spell.duration > 1 ? 'turns' : 'turn' }}</p>
-    <p
-      class="active-spell"
-      v-if="isSpell && (isActiveDisc || activeBoon)"
-    >This effect is currently active.</p>
+    <p v-if="spell.duration">
+      Duration: {{ spell.duration }} {{ spell.duration > 1 ? 'turns' : 'turn' }}
+    </p>
     <div class="civ-checks">
       <label
         v-for="civ in civList"
-        v-show="isSpell || isActiveDisc || (!isActiveDisc && selectedCivs.includes(civ.id))"
+        v-show="canModify || selectedCivs.includes(civ.id)"
         :key="civ.id"
         :class="{
-          active: isBoon ? activeBoon && activeBoon.civs.includes(civ.id) : civ.connect.includes(spell.id),
+          active: civ.hasDisc,
           disabled:
-            (!isSpell && !isActiveDisc) || civ.requiresDisc ||
-            civ.disabledBy ||
-            civ.upgradedBy,
+            !canModify || civ.requiresDisc || civ.disabledBy || civ.upgradedBy,
         }"
         :title="
           `${
@@ -32,10 +26,6 @@
               ? 'Disabled by ' + civ.disabledBy.title
               : civ.upgradedBy
               ? 'Upgraded by ' + civ.upgradedBy.title
-              : civ.duration > 0
-              ? civ.duration === 1
-                ? 'Last turn'
-                : civ.duration + ' turns left'
               : ''
           }`
         "
@@ -43,27 +33,30 @@
         <input
           type="checkbox"
           :value="civ.id"
-          :disabled="!isSpell && !isActiveDisc || civ.requiresDisc || civ.disabledBy || civ.upgradedBy"
+          :disabled="
+            !canModify || civ.requiresDisc || civ.disabledBy || civ.upgradedBy
+          "
           v-model="selectedCivs"
+          @click.prevent="castSpell(civ.id)"
         />
         <span :class="`icon icon-${civ.id}`"></span>
         <span class="title">{{ civ.title }}</span>
+        <span
+          class="mana"
+          :class="{ remove: civ.hasDisc }"
+          v-show="
+            canModify && !civ.requiresDisc && !civ.disabledBy && !civ.upgradedBy
+          "
+        >
+          <span class="inner">{{ civ.manaCost }}</span>
+        </span>
+        <span class="duration" v-show="civ.duration > 0 && civ.hasDisc">
+          ({{
+            civ.duration === 1 ? 'Last turn' : civ.duration + ' turns left'
+          }})
+        </span>
       </label>
     </div>
-    <p class="changes" v-if="civChanges.length && (isActiveDisc || activeBoon)">
-      Changes:
-      <span
-        v-for="change in civChanges"
-        :key="change.id"
-        :class="change.type === 'connect' ? 'connect' : 'disconnect'"
-      >{{ change.type === 'connect' ? 'Connect' : 'Disconnect'}} {{change.title}}</span>
-    </p>
-    <p v-show="manaCost">Mana cost: {{ manaCost }}</p>
-    <button
-      v-if="isSpell || isActiveDisc"
-      class="primary"
-      @click.prevent="castSpell"
-    >{{isActiveDisc || activeBoon ? isRemove ? 'Remove' : 'Modify' : 'Create'}}</button>
   </div>
 </template>
 
@@ -82,13 +75,12 @@ export default {
   },
   computed: {
     civList() {
+      const activeDisc = this.$store.getters.world.discs.find(
+        disc => disc.id === this.spell?.id
+      );
       return this.$store.getters.civs.civList.map(civ => {
         const missingRequired = this.spell?.requires?.find(
-          id =>
-            !civ.connect.includes(id) &&
-            !this.$store.getters.civs.boons.find(
-              boon => boon.id === id && boon.civs.includes(civ.id)
-            )
+          id => !civ.connect.includes(id)
         );
         return {
           ...civ,
@@ -97,143 +89,50 @@ export default {
             this.$store.getters.world.allDisclike.find(
               disc => disc.id === missingRequired
             ),
-          upgradedBy: this.isBoon
-            ? this.$store.getters.civs.boons.find(
-                boon =>
-                  boon.upgrades?.includes(this.spell?.id) &&
-                  boon.civs.includes(civ.id)
-              )
-            : this.$store.getters.world.discs.find(disc =>
-                civ.connect.find(
-                  conn =>
-                    conn === disc.id && disc.upgrades?.includes(this.spell?.id)
-                )
-              ),
-          disabledBy: this.isBoon
-            ? this.$store.getters.civs.boons.find(
-                boon =>
-                  boon.disables?.includes(this.spell?.id) &&
-                  boon.civs.includes(civ.id)
-              )
-            : this.$store.getters.world.discs.find(disc =>
-                civ.connect.find(
-                  conn =>
-                    conn === disc.id && disc.disables?.includes(this.spell?.id)
-                )
-              ),
-          duration: this.activeBoon?.durations?.[
-            this.activeBoon?.civs?.indexOf(civ.id)
-          ],
+          upgradedBy: this.$store.getters.world.discs.find(disc =>
+            civ.connect.find(
+              conn =>
+                conn === disc.id && disc.upgrades?.includes(this.spell?.id)
+            )
+          ),
+          disabledBy: this.$store.getters.world.discs.find(disc =>
+            civ.connect.find(
+              conn =>
+                conn === disc.id && disc.disables?.includes(this.spell?.id)
+            )
+          ),
+          duration: activeDisc?.durations?.[civ.id],
+          manaCost: this.gameAction('getManaCost', this.spell?.id, civ.id),
+          hasDisc: civ.connect.includes(activeDisc?.id),
         };
       });
     },
-    isBoon() {
-      return this.spell?.type === 'boon';
-    },
-    activeBoon() {
-      return this.$store.getters.civs.boons.find(
-        boon => boon.id === this.spell?.id
-      );
-    },
-    isActiveDisc() {
-      return (
-        !this.isBoon &&
-        this.$store.getters.world.discs.find(
-          discFind => discFind.id === this.spell.id
-        ) &&
-        this.$store.getters.spark.skills.find(
-          skill => skill.id === this.spell.skill
-        )?.isActive
-      );
-    },
-    isRemove() {
-      return (
-        (this.isActiveDisc || this.activeBoon) && this.selectedCivs.length === 0
-      );
-    },
-    civChanges() {
-      if (this.isActiveDisc) {
-        return this.civList
-          .filter(civ => {
-            return (
-              civ.connect.includes(this.spell.id) !==
-              this.selectedCivs.includes(civ.id)
-            );
-          })
-          .map(civ => ({
-            type: civ.connect.includes(this.spell.id)
-              ? 'disconnect'
-              : 'connect',
-            id: civ.id,
-            title: civ.title,
-          }));
-      } else if (this.activeBoon) {
-        return this.civList
-          .filter(
-            civ =>
-              this.activeBoon.civs.includes(civ.id) !==
-              this.selectedCivs.includes(civ.id)
-          )
-          .map(civ => ({
-            type: this.activeBoon.civs.includes(civ.id)
-              ? 'disconnect'
-              : 'connect',
-            id: civ.id,
-            title: civ.title,
-          }));
-      } else {
-        return this.selectedCivs.map(civ => ({
-          type: 'connect',
-          id: civ,
-          title: this.civList.find(civFind => civFind.id === civ)?.title,
-        }));
-      }
-    },
-    manaCost() {
-      if (!this.isSpell && !this.isActiveDisc) {
-        return 0;
-      }
-      return this.gameAction('getManaCost', {
-        [this.isBoon ? 'boonId' : 'discId']: this.spell.id,
-        isActive: this.isActiveDisc || !!this.activeBoon,
-        civChanges: this.civChanges,
-      });
+    canModify() {
+      return this.$store.getters.spark.skills.find(
+        skill => skill.id === this.spell.skill
+      )?.isActive;
     },
   },
   watch: {
-    isReset(val) {
-      if (val) {
-        this.updateSelectedCivs(this.spell);
-      }
-    },
     spell: {
       immediate: true,
-      handler(newDisc) {
-        this.updateSelectedCivs(newDisc);
+      handler(newSpell) {
+        this.updateSelectedCivs(newSpell);
       },
+    },
+    isReset() {
+      this.updateSelectedCivs(this.spell);
     },
   },
   methods: {
-    updateSelectedCivs(spell) {
-      this.selectedCivs = this.civList
-        .filter(civ =>
-          this.isBoon
-            ? this.activeBoon?.civs.includes(civ.id)
-            : civ.connect.includes(spell?.id)
-        )
+    updateSelectedCivs(newSpell) {
+      this.selectedCivs = this.$store.getters.civs.civList
+        .filter(civ => civ.connect.includes(newSpell?.id))
         .map(civ => civ.id);
     },
-    castSpell() {
-      if (
-        (this.isActiveDisc &&
-          this.gameAction('modifyDisc', this.spell.id, this.civChanges)) ||
-        (this.activeBoon &&
-          this.gameAction('modifyBoon', this.spell.id, this.civChanges)) ||
-        (!this.isActiveDisc &&
-          !this.activeBoon &&
-          this.gameAction('castSpell', this.spell.id, this.selectedCivs))
-      ) {
-        this.$emit('savedChanges');
+    castSpell(civId) {
+      if (this.gameAction('castSpell', this.spell.id, civId)) {
+        setTimeout(() => this.updateSelectedCivs(this.spell), 10);
       }
     },
   },
@@ -277,51 +176,30 @@ export default {
     margin-bottom: 40px;
   }
   .civ-checks {
+    display: flex;
     margin: 0 -10px 40px;
+    padding-top: 10px;
 
     label {
-      display: inline-block;
-      margin: 10px;
+      display: flex;
+      margin: 0 10px 0 0;
       position: relative;
       cursor: pointer;
+      width: 90px;
+      flex-direction: column;
+      text-align: center;
     }
 
     input {
       position: absolute;
       left: -9999em;
     }
-
-    .icon {
-      display: inline-block;
-      width: 60px;
-      height: 60px;
-      background-size: cover;
-      border: 3px solid #ccc;
-      border-radius: 50px;
-      box-shadow: $shadow2;
-    }
-    .title {
-      position: absolute;
-      bottom: -20px;
-      left: 0;
-      right: 0;
-      text-align: center;
-    }
-
     input:checked + .icon {
-      border-color: $cBlue;
-      & .title {
-        color: $cBlue;
-      }
-    }
-
-    .active input:checked + .icon {
       border-color: $cGreen;
       & + .title {
         color: $cGreen;
       }
     }
-
     input:disabled + .icon {
       box-shadow: none;
       filter: grayscale(0.7);
@@ -330,11 +208,60 @@ export default {
     input:disabled:checked + .icon,
     .active input:disabled:checked + .icon {
       border-color: #444;
-
       & + .title {
         color: $cText;
       }
     }
+
+    .icon {
+      position: relative;
+      left: 15px;
+      display: inline-block;
+      width: 60px;
+      height: 60px;
+      background-size: cover;
+      border: 3px solid #ccc;
+      border-radius: 50px;
+      box-shadow: $shadow2;
+      margin-bottom: 6px;
+    }
+    .title {
+      margin-bottom: 6px;
+    }
+
+    .mana {
+      margin: 0 0 6px;
+      .inner {
+        padding: 2px 10px 2px 25px;
+        display: inline-block;
+        border-radius: 100px;
+        background: $cGreen;
+        color: #fff;
+        position: relative;
+        &:before {
+          content: '';
+          position: absolute;
+          left: 4px;
+          top: 4px;
+          border-radius: 50px;
+          width: 12px;
+          height: 12px;
+          display: inline-block;
+          background: $cMana;
+          border: 2px solid lighten($cMana, 15%);
+        }
+      }
+      &.remove .inner {
+        background: $cError;
+      }
+    }
+
+    .duration {
+      font-size: 12px;
+      line-height: 18px;
+      font-style: italic;
+    }
+
     label.disabled {
       cursor: default;
     }

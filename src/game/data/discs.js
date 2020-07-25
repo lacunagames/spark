@@ -3,7 +3,7 @@ export default [
   {
     id: 'dark-forest',
     title: 'Dark forest',
-    turnGrow: { pop: 1 },
+    turnGrow: { food: 13 },
     skill: 'trickery',
     category: 'trickery',
     mana: 10,
@@ -13,7 +13,7 @@ export default [
   {
     id: 'jungle',
     title: 'Jungle',
-    turnGrow: { pop: 0.8 },
+    turnGrow: { food: 16 },
     skill: 'nature',
     category: 'nature',
     mana: 10,
@@ -23,7 +23,7 @@ export default [
   {
     id: 'desert',
     title: 'Desert',
-    turnGrow: { pop: 0.6 },
+    turnGrow: { food: 6 },
     skill: 'fire',
     category: 'fire',
     mana: 10,
@@ -33,7 +33,7 @@ export default [
   {
     id: 'grassland',
     title: 'Grassland',
-    turnGrow: { pop: 1.1 },
+    turnGrow: { food: 14 },
     skill: 'air',
     category: 'air',
     mana: 10,
@@ -43,7 +43,7 @@ export default [
   {
     id: 'mountain',
     title: 'Mountain',
-    turnGrow: { pop: 0.8 },
+    turnGrow: { food: 10 },
     skill: 'earth',
     category: 'earth',
     mana: 10,
@@ -53,7 +53,7 @@ export default [
   {
     id: 'swamp',
     title: 'Swamp',
-    turnGrow: { pop: 9.8 },
+    turnGrow: { food: 12 },
     skill: 'water',
     category: 'water',
     mana: 10,
@@ -63,7 +63,7 @@ export default [
   {
     id: 'tundra',
     title: 'Tundra',
-    turnGrow: { pop: 0.5 },
+    turnGrow: { food: 5 },
     skill: 'earth',
     category: 'earth',
     mana: 10,
@@ -73,7 +73,7 @@ export default [
   {
     id: 'taiga',
     title: 'Taiga',
-    turnGrow: { pop: 0.7 },
+    turnGrow: { food: 7 },
     skill: 'earth',
     category: 'earth',
     mana: 10,
@@ -83,7 +83,7 @@ export default [
   {
     id: 'lake',
     title: 'Lake',
-    turnGrow: { pop: 1 },
+    turnGrow: { food: 9 },
     skill: 'water',
     category: 'water',
     mana: 10,
@@ -93,7 +93,7 @@ export default [
   {
     id: 'sea',
     title: 'Sea',
-    turnGrow: { pop: 0.7 },
+    turnGrow: { food: 10 },
     skill: 'water',
     category: 'water',
     mana: 10,
@@ -103,7 +103,7 @@ export default [
   {
     id: 'tropical-paradise',
     title: 'Tropical paradise',
-    turnGrow: { pop: 1.1 },
+    turnGrow: { food: 20 },
     skill: 'life',
     category: 'nature',
     mana: 10,
@@ -113,7 +113,7 @@ export default [
   {
     id: 'floating-rocks',
     title: 'Floating rocks',
-    turnGrow: { pop: 0.9 },
+    turnGrow: { food: 11 },
     skill: 'air3',
     category: 'air',
     mana: 10,
@@ -123,7 +123,7 @@ export default [
   {
     id: 'mushroom-forest',
     title: 'Mushroom forest',
-    turnGrow: { pop: 1 },
+    turnGrow: { food: 11 },
     skill: 'life',
     category: 'nature',
     mana: 10,
@@ -133,7 +133,7 @@ export default [
   {
     id: 'wasteland',
     title: 'Wasteland',
-    turnGrow: { pop: 1.1 },
+    turnGrow: { food: 8 },
     skill: 'fire3',
     category: 'fire',
     mana: 10,
@@ -143,7 +143,7 @@ export default [
   {
     id: 'volcanic-lands',
     title: 'Volcanic lands',
-    turnGrow: { pop: 1.1 },
+    turnGrow: { food: 6 },
     skill: 'fire3',
     category: 'fire',
     mana: 10,
@@ -376,7 +376,7 @@ export default [
   {
     id: 'drought',
     title: 'Drought',
-    turnGrow: { xp: 0.2 },
+    turnGrow: { xp: 0.2, food: -6 },
     turnDamage: { val: 3, type: 'fire' },
     skill: 'fire',
     category: 'fire',

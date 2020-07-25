@@ -1,9 +1,5 @@
 import StateHandler from './statehandler';
 import allSkills from './data/skills';
-import allSpells from './data/spells';
-import allDiscs from './data/discs';
-import { allBoons } from './data/civList';
-import allTechs from './data/civTech';
 import utils from '@/game/utils';
 
 const defaultState = {
@@ -144,6 +140,10 @@ class Spark extends StateHandler {
   castSpell(spellId, civId) {
     const spell = this.state.spells.find(spell => spell.id === spellId);
 
+    if (spell.onCast) {
+      this.world.executeActions({ actions: spell.onCast, civId, disc: spell });
+    }
+
     if (spell.type !== 'spell' || spell.createDisc) {
       return this.modifyDisc(spell.createDisc || spellId, civId);
     }
@@ -161,9 +161,11 @@ class Spark extends StateHandler {
         this.state.xpNextTurn +
         utils.round(manaCost * this.state.manaToXpMultiplier, 2),
     });
-    this.system.showMessage(
-      this.world.logEvent({ type: 'sparkSpell', civId, spellId })
-    );
+    if (!spell.skipLog) {
+      this.system.showMessage(
+        this.world.logEvent({ type: 'sparkSpell', civId, spellId })
+      );
+    }
     this.updateManaCharges(manaCost, spell.category);
     return true;
   }
@@ -197,7 +199,7 @@ class Spark extends StateHandler {
 
     if (!isActive || isConnect) {
       this.world.createDisc(discId, civId);
-    } else if (!isConnect) {
+    } else if (!isConnect && !isRemove) {
       this.civs.disconnectDisc(civId, discId);
     }
 
@@ -205,6 +207,9 @@ class Spark extends StateHandler {
       this.system.showMessage(
         this.world.logEvent({ type: 'removeDisc', discId, civId })
       );
+      if (disc.onCancel) {
+        this.world.executeActions({ actions: disc.onCancel, civId, disc });
+      }
       this.world.removeDisc(discId);
     } else {
       this.system.showMessage(
@@ -289,12 +294,9 @@ class Spark extends StateHandler {
         }
       });
 
-      const newSpells = [
-        ...allSpells,
-        ...allDiscs,
-        ...allBoons,
-        ...allTechs,
-      ].filter(spell => spell.skill === skillId);
+      const newSpells = [...this.world.state.allDisclike].filter(
+        spell => spell.skill === skillId
+      );
       this.setState({ spells: [...this.state.spells, ...newSpells] });
     }
   }

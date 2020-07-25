@@ -1,5 +1,5 @@
 import StateHandler from './statehandler';
-import { allCivs } from './data/civList';
+import allCivs from './data/civList';
 import utils from '@/game/utils';
 
 const defaultState = {
@@ -12,18 +12,33 @@ const defaultState = {
     { left: 56, top: 44 },
   ],
   civList: [],
+  civStats: [
+    { name: 'xp', defaultVal: 0, title: 'Xp' },
+    {
+      name: 'pop',
+      maxName: 'maxPop',
+      defaultVal: 30,
+      maxVal: 100,
+      title: 'Population',
+    },
+    { name: 'tech', defaultVal: 10, title: 'Tech' },
+    { name: 'science', defaultVal: 0, title: 'Science' },
+    { name: 'warlust', defaultVal: 30, title: 'Warlust' },
+    { name: 'military', defaultVal: 0, title: 'Military power' },
+    { name: 'mana', defaultVal: 0, title: 'Mana' },
+    { name: 'magic', defaultVal: 0, title: 'Magic power' },
+    { name: 'wealth', defaultVal: 0, title: 'Wealth' },
+    { name: 'commerce', defaultVal: 0, title: 'Commerce' },
+    {
+      name: 'food',
+      defaultVal: 10,
+      title: 'Food',
+      maxName: 'maxFood',
+      maxVal: 100,
+    },
+    { name: 'expand', defaultVal: 0, title: 'Expand' },
+  ],
 };
-
-const civStats = [
-  { name: 'xp', defaultVal: 0 },
-  { name: 'pop', maxName: 'maxPop', defaultVal: 30, maxVal: 100 },
-  { name: 'action', maxName: 'maxAction', defaultVal: 1, maxVal: 1 },
-  { name: 'tech', defaultVal: 10 },
-  { name: 'military', defaultVal: 0 },
-  { name: 'magic', defaultVal: 0 },
-  { name: 'commerce', defaultVal: 0 },
-  { name: 'expand', defaultVal: 0 },
-];
 
 class Civs extends StateHandler {
   constructor(subsctibeState) {
@@ -36,59 +51,85 @@ class Civs extends StateHandler {
   }
 
   initCivs() {
-    let civ;
     for (let i = 0; i < 2; i++) {
+      let civ;
       do {
         civ = allCivs[Math.floor(Math.random() * allCivs.length)];
-      } while (this.state.civList.find(civFind => civFind.id === civ?.id));
-      this.setState({
-        civList: [
-          ...this.state.civList,
-          {
-            ...civStats.reduce(
-              (obj, stat) => ({
-                ...obj,
-                [stat.name]: stat.defaultVal,
-                ...(stat.maxName
-                  ? {
-                      [stat.maxName]: stat.maxVal,
-                    }
-                  : {}),
-              }),
-              {}
-            ),
-            ...civ,
-            level: 1,
-            index: this.useIndex('civList'),
-            connect: [],
-            popLog: [
-              civ.pop || civStats.find(stat => stat.name === 'pop')?.defaultVal,
-            ],
-          },
-        ],
-      });
-      this.world.logEvent({ type: 'civCreated', civId: civ.id });
+      } while (!this.createCiv(civ.id));
     }
-    this.state.civList.forEach(civ => {
-      this.world.createDisc(
-        civ.biomes[Math.floor(Math.random() * civ.biomes.length)],
-        civ.id
-      );
-      civ.startingTechs.forEach(techId =>
-        this.world.createDisc(techId, civ.id)
-      );
-      civ.startingBoons.forEach(boonId =>
-        this.world.createDisc(boonId, civ.id)
-      );
-      if (civ.action >= civ.level) this.civAction(civ);
-    });
     this.system.setState({ muteMessages: false });
+  }
+
+  createCiv(civId) {
+    let civ = allCivs.find(civ => civ.id === civId);
+    if (this.state.civList.find(civ => civ.id === civId)) {
+      return false;
+    }
+    this.setState({
+      civList: [
+        ...this.state.civList,
+        {
+          ...this.state.civStats.reduce(
+            (obj, stat) => ({
+              ...obj,
+              [stat.name]: stat.defaultVal,
+              ...(stat.maxName
+                ? {
+                    [stat.maxName]: stat.maxVal,
+                  }
+                : {}),
+            }),
+            {}
+          ),
+          ...civ,
+          level: 1,
+          index: this.useIndex('civList'),
+          connect: [],
+          popLog: [
+            civ.pop ||
+              this.state.civStats.find(stat => stat.name === 'pop')?.defaultVal,
+          ],
+        },
+      ],
+    });
+    this.world.logEvent({ type: 'civCreated', civId: civId });
+    this.world.createDisc(
+      civ.biomes[Math.floor(Math.random() * civ.biomes.length)],
+      civId
+    );
+    civ.startingTechs.forEach(techId => this.world.createDisc(techId, civId));
+    civ.startingBoons.forEach(boonId => this.world.createDisc(boonId, civId));
+    this.world.executeActions({
+      actions: [
+        { queueAction: 'war' },
+        { queueAction: 'magic' },
+        { queueAction: 'commerce' },
+        { queueAction: 'expand' },
+      ],
+      civId,
+    });
+    return this.state.civList.find(civ => civ.id === civId);
+  }
+
+  killCiv(civId, isShowMessage) {
+    const log = this.world.logEvent({ type: 'civDied', civId: civId });
+    if (isShowMessage) {
+      this.system.showMessage(log);
+    }
+    this._updateStateObj('civList', civId, { connect: [] });
+    this.world.checkDiscRemove();
+    this.world.removeQueueItems({ civId: civId });
+    this.clearIndex(
+      'civList',
+      this.state.civList.find(civ => civ.id === civId)?.index
+    );
+    this._removeStateObj('civList', civId);
   }
 
   civTurn() {
     this.state.civList.forEach(civ => {
       civ = this.turnDamage(civ);
-      const grow = civStats.reduce(
+      const grow = this.state.civStats.reduce(
         (obj, stat) => ({ ...obj, [stat.name]: 0 }),
         {}
       );
@@ -116,9 +157,15 @@ class Civs extends StateHandler {
           xpToLevel: civ.xpToLevel + civ.xpLevelGrow,
         });
       }
+      grow.food -= (civ.pop + grow.pop) / 5;
+      const newFood = civ.food + grow.food - 20;
+      grow.pop += newFood / 10;
+      if (newFood < 0) {
+        grow.food -= newFood / 5;
+      }
 
       civ = this._updateStateObj('civList', civ.id, {
-        ...civStats.reduce(
+        ...this.state.civStats.reduce(
           (obj, stat) => ({
             ...obj,
             [stat.name]: stat.maxName
@@ -140,13 +187,7 @@ class Civs extends StateHandler {
         });
       }
       if (civ.pop <= 0) {
-        this.world.logEvent({ type: 'civDied', civId: civ.id });
-        this._updateStateObj('civList', civ.id, { connect: [] });
-        this.world.checkDiscRemove();
-        this.clearIndex('civList', civ.index);
-        this._removeStateObj('civList', civ.id);
-      } else if (civ.action >= civ.level) {
-        civ = this.civAction(civ);
+        this.killCiv(civ.id);
       }
       this._updateStateObj('civList', civ.id, {
         popLog: [...civ.popLog, civ.pop],
@@ -159,7 +200,7 @@ class Civs extends StateHandler {
     const civ = this.state.civList.find(civ => civ.id === civId);
     const disc = this.world.state.discs.find(disc => disc.id === discId);
     const boostProps = Object.keys(disc.boost || []).reduce((obj, key) => {
-      let maxStat = civStats.find(stat => stat.maxName === key);
+      let maxStat = this.state.civStats.find(stat => stat.maxName === key);
       return {
         ...obj,
         ...(maxStat
@@ -179,7 +220,7 @@ class Civs extends StateHandler {
       ...boostProps,
     });
     if (disc.onConnect) {
-      this.world.executeActions({ actions: disc.onConnect, civId });
+      this.world.executeActions({ actions: disc.onConnect, civId, disc });
     }
   }
 
@@ -198,6 +239,9 @@ class Civs extends StateHandler {
       connect: civ.connect.filter(conn => conn !== discId),
       ...boostProps,
     });
+    if (disc.onDisconnect) {
+      this.world.executeActions({ actions: disc.onDisconnect, civId, disc });
+    }
   }
 
   turnDamage(civ) {
@@ -294,40 +338,6 @@ class Civs extends StateHandler {
       pop: utils.round(
         civ.pop - damages.reduce((vals, damageObj) => vals + damageObj.val, 0)
       ),
-    });
-  }
-
-  civAction(civ) {
-    const possibleActions = [];
-    civ.connect.forEach(discId => {
-      const disc = this.world.state.discs.find(disc => disc.id === discId);
-      const obsolete = civ.connect.some(
-        conn =>
-          conn !== disc.id &&
-          this.world.state.allDisclike
-            .find(disc => disc.id === conn)
-            ?.upgrades?.includes(disc.id)
-      );
-
-      if (
-        disc.actionDisc &&
-        !obsolete &&
-        !civ.connect.includes(disc.actionDisc)
-      ) {
-        possibleActions.push(disc.actionDisc);
-      }
-    });
-    const discId =
-      possibleActions[Math.floor(Math.random() * possibleActions.length)];
-
-    if (!discId) {
-      // console.log(`No action left for ${civ.id}`);
-      return civ;
-    }
-    const disc = this.world.createDisc(discId, civ.id);
-    this.world.logEvent({ type: 'civAction', civId: civ.id, discId });
-    return this._updateStateObj('civList', civ.id, {
-      action: civ.action - disc.level,
     });
   }
 }

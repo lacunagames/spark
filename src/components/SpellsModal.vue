@@ -73,23 +73,27 @@ export default {
     spellTabs() {
       const tabs = [{ id: 'all-spells', title: 'All spells' }];
 
-      this.$store.getters.spark.spells.forEach(spell => {
-        if (!tabs.find(tab => spell.category === tab.id)) {
-          tabs.push({
-            id: spell.category,
-            title:
-              spell.category.charAt(0).toUpperCase() + spell.category.slice(1),
-          });
-        }
-      });
+      this.$store.getters.spark.spells
+        .filter(spell => spell.category)
+        .forEach(spell => {
+          if (!tabs.find(tab => spell.category === tab.id)) {
+            tabs.push({
+              id: spell.category,
+              title:
+                spell.category.charAt(0).toUpperCase() +
+                spell.category.slice(1),
+            });
+          }
+        });
       return tabs;
     },
     filteredSpells() {
       return this.$store.getters.spark.spells
         .filter(
           spell =>
-            this.selectedSpellTab === 'all-spells' ||
-            spell.category === this.selectedSpellTab
+            spell.category &&
+            (this.selectedSpellTab === 'all-spells' ||
+              spell.category === this.selectedSpellTab)
         )
         .map(spell => ({
           ...spell,

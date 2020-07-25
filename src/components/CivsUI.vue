@@ -87,12 +87,23 @@
               <div class="stats">
                 <p>Xp: {{ selectedCiv.xp }} / {{ selectedCiv.xpToLevel }}</p>
                 <p>
-                  Action: {{ selectedCiv.action }} / {{ selectedCiv.maxAction }}
+                  Science: {{ selectedCiv.science }} ({{ selectedCiv.tech }}
+                  tech)
                 </p>
-                <p>Tech: {{ selectedCiv.tech }}</p>
-                <p>Military: {{ selectedCiv.military }}</p>
-                <p>Magic: {{ selectedCiv.magic }}</p>
-                <p>Commerce: {{ selectedCiv.commerce }}</p>
+                <p>
+                  Military: {{ selectedCiv.military }} ({{
+                    selectedCiv.warlust
+                  }}
+                  warlust)
+                </p>
+                <p>
+                  Magic: {{ selectedCiv.magic }} ({{ selectedCiv.mana }} mana)
+                </p>
+                <p>
+                  Commerce: {{ selectedCiv.commerce }} ({{ selectedCiv.wealth }}
+                  wealth)
+                </p>
+                <p>Food: {{ selectedCiv.food }} / {{ selectedCiv.maxFood }}</p>
                 <p>Expand: {{ selectedCiv.expand }}</p>
               </div>
             </template>
@@ -284,12 +295,8 @@ export default {
             x2: world.positions[disc.type][disc.index].left,
             y2: world.positions[disc.type][disc.index].top,
             isModify: false,
-            isPositive:
-              disc.turnGrow?.xp > 0 ||
-              disc.turnGrow?.pop > 0 ||
-              disc.turnGrow?.action > 0 ||
-              disc.turnGrow?.tech,
-            isNegative: disc.turnGrow?.pop < 0,
+            isPositive: false,
+            isNegative: false,
             isVisible: [civ.id, disc.id].includes(this.hovered),
             id: `${discId}-${civ.id}`,
           });

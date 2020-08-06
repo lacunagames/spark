@@ -1,11 +1,17 @@
 <template>
-  <Modal v-show="isModalOpen" @close="closeModal" classes="side-panel skills-modal">
+  <Modal
+    v-show="isModalOpen"
+    @close="closeModal"
+    classes="side-panel skills-modal"
+  >
     <template #header>
       <h2>Powers</h2>
-      <p
-        class="skill-points"
-        v-show="spark.skillPoints"
-      >You have {{ spark.skillPoints }} point{{ spark.skillPoints === 1 ? '' : 's' }} left</p>
+      <p class="skill-points" v-show="spark.skillPoints">
+        You have {{ spark.skillPoints }} point{{
+          spark.skillPoints === 1 ? '' : 's'
+        }}
+        left
+      </p>
     </template>
     <template #body>
       <ul class="skill-tree">
@@ -13,7 +19,11 @@
           <svg viewBox="0 0 100 100">
             <line
               v-for="(conn, index) in skillConnections"
-              :class="{active: conn.isActive, filled: conn.isFilled, disabled: conn.isDisabled}"
+              :class="{
+                active: conn.isActive,
+                filled: conn.isFilled,
+                disabled: conn.isDisabled,
+              }"
               :key="index"
               :x1="conn.x1"
               :y1="conn.y1"
@@ -31,7 +41,11 @@
           <button
             :title="skill.title"
             @click.prevent="gameAction('learnSkill', skill.id)"
-            :class="{ active: skill.isActive, minor: skill.minor, disabled: skill.isDisabled }"
+            :class="{
+              active: skill.isActive,
+              minor: skill.minor,
+              disabled: skill.isDisabled,
+            }"
             :disabled="false"
           >
             <span :class="[`icon-${skill.icon || skill.id}`]"></span>
@@ -165,6 +179,7 @@ export default {
       border: 2px solid #555;
       transition: border-color $animFast;
       z-index: 2;
+      border-radius: 10px;
 
       span {
         background-size: cover;

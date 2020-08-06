@@ -6,9 +6,17 @@
     </h2>
     <p class="spell-desc">{{ spell.desc }}</p>
     <p v-if="spell.duration">
-      Duration: {{ spell.duration }} {{ spell.duration > 1 ? 'turns' : 'turn' }}
+      <span v-if="!isActiveDisc || !spell.isGlobal">
+        Duration: {{ spell.duration }}
+        {{ spell.duration > 1 ? 'turns' : 'turn' }}
+      </span>
+      <span v-if="isActiveDisc && spell.isGlobal">
+        {{
+          spell.duration === 1 ? 'Last turn.' : spell.duration + ' turns left.'
+        }}
+      </span>
     </p>
-    <div class="civ-checks">
+    <div class="civ-checks" v-show="canModify || selectedCivs.length">
       <label
         v-for="civ in civList"
         v-show="canModify || selectedCivs.includes(civ.id)"
@@ -57,6 +65,17 @@
         </span>
       </label>
     </div>
+    <div class="villain" v-if="spell.villain">
+      <h3>Villain stats</h3>
+      <ul>
+        <li>Type: {{ spell.villain.type }}</li>
+        <li>Health: {{ spell.villain.health }}</li>
+        <li>Power: {{ spell.villain.power }}</li>
+        <li>
+          Mana: {{ spell.villain.mana }} (+{{ spell.villain.manaPerTurn }}/turn)
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
@@ -65,7 +84,6 @@ export default {
   name: 'SpellDetails',
   props: {
     spell: Object,
-    isSpell: Boolean,
     isReset: Boolean,
   },
   data: function() {
@@ -106,6 +124,11 @@ export default {
           hasDisc: civ.connect.includes(activeDisc?.id),
         };
       });
+    },
+    isActiveDisc() {
+      return this.$store.getters.world.discs.find(
+        disc => disc.id === this.spell?.id
+      );
     },
     canModify() {
       return this.$store.getters.spark.skills.find(

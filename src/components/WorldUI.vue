@@ -12,17 +12,25 @@
       >
         <a
           href="#"
-          :class="`icon-${disc.id}`"
+          :class="{ [`icon-${disc.id}`]: true, large: disc.villain }"
           :title="disc.title"
           v-on="hoverHandle(disc.id)"
           @click.prevent="openModal(disc)"
-        ></a>
+        >
+          <CircleMeter
+            v-if="disc.isGlobal && disc.duration"
+            :size="50"
+            :width="3"
+            emptyColor="222"
+            fillColor="ee1e26"
+            :value="(disc.duration - 1) / disc.maxDuration"
+          />
+        </a>
       </li>
     </ul>
     <Modal v-show="isModalOpen" @close="closeModal" classes="disc-modal">
       <template #body>
         <SpellDetails
-          :isSpell="false"
           :isReset="isModalOpen"
           :spell="selectedDisc"
           @savedChanges="closeModal"
@@ -35,12 +43,14 @@
 <script>
 import Modal from '@/components/Modal';
 import SpellDetails from '@/components/SpellDetails';
+import CircleMeter from '@/components/CircleMeter';
 
 export default {
   name: 'WorldUI',
   components: {
     Modal,
     SpellDetails,
+    CircleMeter,
   },
   data() {
     return {
@@ -120,6 +130,19 @@ export default {
 
       &:hover {
         box-shadow: 0 0 2px 4px #ffffd241, $shadow3;
+      }
+
+      svg {
+        position: absolute;
+        left: -3px;
+        top: -3px;
+      }
+
+      &.large {
+        width: 60px;
+        height: 60px;
+        left: -30px;
+        top: -30px;
       }
     }
 

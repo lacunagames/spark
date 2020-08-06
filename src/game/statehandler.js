@@ -13,9 +13,9 @@ class StateHandler {
     arr.forEach(type => (this.indexes[type] = { last: -1, free: [] }));
   }
 
-  useIndex(type) {
+  useIndex(type, isUpgrade) {
     if (this.indexes[type].free.length) {
-      return this.indexes[type].free.shift();
+      return this.indexes[type].free[isUpgrade ? 'pop' : 'shift']();
     } else {
       this.indexes[type].last++;
       return this.indexes[type].last;

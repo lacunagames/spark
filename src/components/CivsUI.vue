@@ -105,6 +105,7 @@
                 </p>
                 <p>Food: {{ selectedCiv.food }} / {{ selectedCiv.maxFood }}</p>
                 <p>Expand: {{ selectedCiv.expand }}</p>
+                <p>Influence: {{ selectedCiv.influence }}%</p>
               </div>
             </template>
             <template #Techs>
@@ -267,38 +268,41 @@ export default {
           const disc = world.discs.find(disc => disc.id === discId);
 
           if (['knowledge', 'boon'].includes(disc.type)) return;
-
-          disc.modifyDisc?.forEach(mod => {
-            const otherDisc = world.discs.find(disc => disc.id === mod.disc);
-
-            if (
-              !otherDisc ||
-              connections.find(conn => conn.id === `${discId}-${otherDisc.id}`)
-            )
-              return;
-            connections.push({
-              x1: world.positions[otherDisc.type][otherDisc.index].left,
-              y1: world.positions[otherDisc.type][otherDisc.index].top,
-              x2: world.positions[disc.type][disc.index].left,
-              y2: world.positions[disc.type][disc.index].top,
-              isModify: true,
-              isPositive: false,
-              isNegative: false,
-              isVisible: [otherDisc.id, disc.id].includes(this.hovered),
-              id: `${discId}-${otherDisc.id}`,
-            });
-          });
-
           connections.push({
             x1: civPos.left,
             y1: civPos.top,
             x2: world.positions[disc.type][disc.index].left,
             y2: world.positions[disc.type][disc.index].top,
             isModify: false,
-            isPositive: false,
-            isNegative: false,
+            isPositive: disc.type === 'biome',
+            isNegative:
+              disc.labels?.includes('force') || disc.labels?.includes('beast'),
             isVisible: [civ.id, disc.id].includes(this.hovered),
             id: `${discId}-${civ.id}`,
+          });
+        });
+      });
+      world.discs.forEach(disc => {
+        if (['knowledge', 'boon'].includes(disc.type)) return;
+
+        disc.connects?.forEach(conn => {
+          const otherDisc = world.discs.find(disc => disc.id === conn.discId);
+
+          if (
+            !otherDisc ||
+            connections.find(conn => conn.id === `${disc.id}-${otherDisc.id}`)
+          )
+            return;
+          connections.push({
+            x1: world.positions[otherDisc.type][otherDisc.index].left,
+            y1: world.positions[otherDisc.type][otherDisc.index].top,
+            x2: world.positions[disc.type][disc.index].left,
+            y2: world.positions[disc.type][disc.index].top,
+            isModify: true,
+            isPositive: conn.isPositive,
+            isNegative: conn.isNegative,
+            isVisible: [otherDisc.id, disc.id].includes(this.hovered),
+            id: `${disc.id}-${otherDisc.id}`,
           });
         });
       });
@@ -538,7 +542,8 @@ export default {
   }
   .history,
   .boons,
-  .techs {
+  .techs,
+  .stats {
     background-color: $cBgLightest;
     display: flex;
     flex-direction: column;

@@ -68,6 +68,7 @@ const defaultState = {
   log: [{ id: 0, items: [] }],
   allDisclike: [...allDiscs, ...allBoons, ...allSpells, ...allTechs],
   actionQueue: [],
+  ending: false,
 };
 
 class World extends StateHandler {
@@ -84,7 +85,7 @@ class World extends StateHandler {
     const biomes = allDiscs.filter(disc => disc.type === 'biome');
     let biomeId;
     for (let i = 0; i < 5; i++) {
-      biomeId = biomes[Math.floor(Math.random() * biomes.length)]?.id;
+      biomeId = utils.randomEl(biomes)?.id;
       this.createDisc(biomeId);
     }
   }
@@ -94,11 +95,22 @@ class World extends StateHandler {
       turn: this.state.turn + 1,
       log: [...this.state.log, { id: this.state.turn + 1, items: [] }],
     });
+    this.system.setState({ muteMessages: true });
 
     this.civs.civTurn();
 
     this.state.discs.forEach(disc => {
-      if (disc.durations) {
+      if (disc.duration && disc.isGlobal) {
+        disc = this._updateStateObj('discs', disc.id, {
+          duration: disc.duration - 1,
+        });
+        if (disc.duration === 0) {
+          this.removeDisc(disc.id);
+          if (disc.onExpire) {
+            this.executeActions({ actions: disc.onExpire, undefined, disc });
+          }
+        }
+      } else if (disc.durations) {
         const durations = Object.keys(disc.durations).reduce(
           (obj, civId) => ({
             ...obj,
@@ -160,143 +172,249 @@ class World extends StateHandler {
 
     this.worldTurn();
     this.spark.sparkTurn();
+    this.system.setState({ muteMessages: false });
   }
 
   worldTurn() {
-    if (this.state.turn % 10 === 0 && this.civs.state.civList.length) {
+    const civIds = this.civs.state.civList.map(civ => civ.id);
+    // Villain actions
+    this.state.discs.forEach(disc => {
+      if (disc.villain) {
+        const villain = { ...disc.villain };
+        villain.mana += villain.manaPerTurn;
+        disc.connects?.forEach(
+          conn =>
+            (villain.power = utils.round(
+              villain.power +
+                (this.state.discs.find(disc => disc.id === conn.discId)
+                  ?.powerPerTurn || 0)
+            ))
+        );
+        if (villain.mana >= 40) {
+          const possibleActions = [
+            { power: 1, discId: 'destruction-minion' },
+            { power: 1, discId: 'lightning-strike' },
+            { power: 2, discId: 'chaos-explosion' },
+            { power: 3, discId: 'destruction-champion' },
+            { power: 4, discId: 'volcano' },
+            { power: 6, discId: 'destroy-biome' },
+            { power: 10, discId: 'destroy-world' },
+          ].filter(
+            action =>
+              !this.state.discs.find(disc => disc.id === action.discId) &&
+              !disc.connects?.some(conn =>
+                this.state.discs.find(
+                  disc =>
+                    disc.id === conn.discId &&
+                    disc.upgrades?.includes(action.discId)
+                )
+              ) &&
+              action.power <= villain.power
+          );
+          const action = utils.randomEl(possibleActions);
+          if (action) {
+            const actionDisc = this.state.allDisclike.find(
+              disc => disc.id === action.discId
+            );
+            villain.mana -= actionDisc.mana;
+            if (actionDisc.type === 'spell') {
+              const civId = actionDisc.isGlobal
+                ? undefined
+                : utils.randomEl(civIds);
+              this.executeActions({
+                actions: actionDisc.onCast,
+                civId,
+                disc: actionDisc,
+                villain: disc,
+              });
+              if (!actionDisc.skipLog) {
+                this.logEvent({
+                  type: 'spellVillain',
+                  civId,
+                  discId: actionDisc.id,
+                  villainId: disc.id,
+                });
+              }
+            } else {
+              this.createDisc(
+                actionDisc.id,
+                actionDisc.isGlobal ? undefined : civIds
+              );
+              this._updateStateObj('discs', disc.id, {
+                connects: [
+                  ...(disc.connects || []),
+                  { discId: actionDisc.id, isPositive: true },
+                ],
+              });
+              this.logEvent({
+                type: 'dangerAppearedVillain',
+                discId: actionDisc.id,
+                civIds: actionDisc.isGlobal ? undefined : civIds,
+                villainId: disc.id,
+              });
+            }
+          }
+        }
+        this._updateStateObj('discs', disc.id, { villain });
+      }
+    });
+    if (this.state.turn === 5) {
+      this.createDisc('god-war');
+      this.logEvent({ type: 'dangerAppeared', discId: 'god-war' });
+    }
+    // Create random dangers
+    if (this.state.turn % 12 === 0 && this.civs.state.civList.length) {
       const dangerDiscs = allDiscs
         .filter(
           disc =>
             (disc.labels?.includes('force') ||
               disc.labels?.includes('beast')) &&
+            !disc.labels?.includes('noRandom') &&
             !this.state.discs.find(discFind => discFind.id === disc.id) &&
             this.state.turn / 10 >= disc.turnDamage?.val - 2
         )
         .map(disc => disc.id);
-      const randomDanger =
-        dangerDiscs[Math.floor(Math.random() * dangerDiscs.length)];
+      const randomDanger = utils.randomEl(dangerDiscs);
 
-      this.civs.state.civList.forEach(civ =>
-        this.createDisc(randomDanger, civ.id)
-      );
+      this.createDisc(randomDanger, civIds);
       this.logEvent({
         type: 'dangerAppeared',
         discId: randomDanger,
-        civIds: this.civs.state.civList.map(civ => civ.id),
+        civIds,
       });
     }
   }
 
-  createDisc(discId, civId) {
-    let disc =
-      this.state.discs.find(disc => disc.id === discId) ||
-      this.state.allDisclike.find(disc => disc.id === discId);
-    const civ = this.civs.state.civList.find(civ => civ.id === civId);
-    const isUpgraded = this.state.discs.find(
-      disc => disc.upgrades?.includes(discId) && civ?.connect.includes(disc.id)
-    );
-    const canAfford = !disc.cost || civ?.[disc.cost.stat] >= disc.cost.value;
+  createDisc(discId, civIds) {
+    civIds = Array.isArray(civIds) ? civIds : [civIds];
+    let returnVal, isUpgrade;
+    civIds.forEach(civId => {
+      let disc =
+        this.state.discs.find(disc => disc.id === discId) ||
+        this.state.allDisclike.find(disc => disc.id === discId);
+      const civ = this.civs.state.civList.find(civ => civ.id === civId);
+      const isUpgraded = this.state.discs.find(
+        disc =>
+          disc.upgrades?.includes(discId) && civ?.connect.includes(disc.id)
+      );
+      const canAfford = !disc.cost || civ?.[disc.cost.stat] >= disc.cost.value;
 
-    if (!disc || civ?.connect.includes(discId) || isUpgraded || !canAfford) {
-      return false;
-    }
-
-    [...(disc.upgrades || []), ...(disc.removes || [])].forEach(
-      removeDiscId => {
-        const discUnique = this.state.discs.find(
-          discFind => discFind.id === `${removeDiscId}|${civId}`
-        );
-        const othersConnected = this.civs.state.civList.some(
-          civ => civ.id !== civId && civ.connect.includes(removeDiscId)
-        );
-        if (civ?.connect.includes(removeDiscId) && othersConnected) {
-          this.civs.disconnectDisc(civId, removeDiscId);
-        }
-        if (discUnique || !othersConnected) {
-          this.removeDisc(
-            discUnique ? `${removeDiscId}|${civId}` : removeDiscId
-          );
-        }
-        this.removeQueueItems({ discId: removeDiscId });
+      if (
+        !disc ||
+        civ?.connect.includes(discId) ||
+        isUpgraded ||
+        !canAfford ||
+        this.state.ending
+      ) {
+        returnVal = false;
+        return;
       }
-    );
 
-    if (disc.cost) {
-      this.civs._updateStateObj('civList', civId, {
-        [disc.cost.stat]: civ[disc.cost.stat] - disc.cost.value,
-      });
-    }
+      [...(disc.upgrades || []), ...(disc.removes || [])].forEach(
+        removeDiscId => {
+          const discUnique = this.state.discs.find(
+            discFind => discFind.id === `${removeDiscId}|${civId}`
+          );
+          const othersConnected = this.civs.state.civList.some(
+            civ =>
+              !civIds.includes(civ.id) && civ.connect.includes(removeDiscId)
+          );
+          if (civ?.connect.includes(removeDiscId) && othersConnected) {
+            this.civs.disconnectDisc(civId, removeDiscId);
+          }
+          if (discUnique || !othersConnected) {
+            isUpgrade = disc.upgrades.includes(removeDiscId);
+            this.removeDisc(
+              discUnique ? `${removeDiscId}|${civId}` : removeDiscId
+            );
+          }
+          this.removeQueueItems({ discId: removeDiscId });
+        }
+      );
 
-    if (disc.duration === -1) {
-      ['onCreate', 'onConnect', 'onExpire', 'onDisconnect', 'onRemove'].forEach(
-        trigger => {
+      if (disc.cost) {
+        this.civs._updateStateObj('civList', civId, {
+          [disc.cost.stat]: civ[disc.cost.stat] - disc.cost.value,
+        });
+      }
+
+      if (disc.duration === -1) {
+        [
+          'onCreate',
+          'onConnect',
+          'onExpire',
+          'onDisconnect',
+          'onRemove',
+        ].forEach(trigger => {
           if (disc[trigger]) {
             this.executeActions({ actions: disc[trigger], civId, disc });
           }
-        }
-      );
-      return false;
-    }
-
-    disc = {
-      ...disc,
-      id: disc.civUnique ? `${disc.id}|${civ.id}` : disc.id,
-      ...(disc.duration
-        ? {
-            durations: {
-              ...(disc.durations || {}),
-              [civId]: disc.duration,
-            },
-          }
-        : {}),
-    };
-
-    if (disc.isDiscovery) {
-      const availableTechs = allTechs.filter(
-        tech =>
-          tech.level <= civ.level &&
-          !civ.connect.includes(tech.id) &&
-          !tech.requires?.some(reqId => !civ.connect.includes(reqId))
-      );
-      const randomTech =
-        availableTechs[Math.floor(Math.random() * availableTechs.length)];
-
-      if (!randomTech) {
-        return false;
+        });
+        returnVal = false;
+        return;
       }
+
       disc = {
         ...disc,
-        title: `${disc.title}: ${randomTech.title}`,
-        desc: `${disc.desc}: ${randomTech.title}.`,
-        onExpire: [
-          { createDisc: randomTech.id, skipMessage: true },
-          ...(disc.onExpire || []),
-        ],
-        durations: {
-          [civId]: Math.ceil(
-            (disc.duration * randomTech.level) /
-              (civ.tech > 19 ? 1 + 0.1 * Math.floor((civ.tech - 15) / 5) : 1)
-          ),
-        },
+        id: disc.civUnique ? `${disc.id}|${civ.id}` : disc.id,
+        ...(disc.duration && !disc.isGlobal
+          ? {
+              durations: {
+                ...(disc.durations || {}),
+                [civId]: disc.duration,
+              },
+            }
+          : {}),
+        ...(disc.duration && disc.isGlobal
+          ? { maxDuration: disc.duration }
+          : {}),
       };
-    }
 
-    if (typeof disc.index !== 'number') {
-      this.setState({
-        discs: [
-          ...this.state.discs,
-          { ...disc, index: this.useIndex(disc.type) },
-        ],
-      });
-    } else {
-      this._updateStateObj('discs', disc.id, disc);
-    }
-    if (civId) {
-      this.civs.connectDisc(civId, disc.id);
-    }
-    return this.state.discs.find(disc =>
-      [discId, `${discId}|${civId}`].includes(disc.id)
-    );
+      if (disc.isDiscovery) {
+        const availableTechs = allTechs.filter(
+          tech =>
+            tech.level <= civ.level &&
+            !civ.connect.includes(tech.id) &&
+            !tech.requires?.some(reqId => !civ.connect.includes(reqId))
+        );
+        const randomTech = utils.randomEl(availableTechs);
+
+        if (!randomTech) {
+          returnVal = false;
+          return;
+        }
+        disc = {
+          ...disc,
+          title: `${disc.title}: ${randomTech.title}`,
+          desc: `${disc.desc}: ${randomTech.title}.`,
+          onExpire: [{ createDisc: randomTech.id }, ...(disc.onExpire || [])],
+          durations: {
+            [civId]: Math.ceil(
+              (disc.duration * randomTech.level) /
+                (civ.tech > 19 ? 1 + 0.1 * Math.floor((civ.tech - 15) / 5) : 1)
+            ),
+          },
+        };
+      }
+
+      if (typeof disc.index !== 'number') {
+        this.setState({
+          discs: [
+            ...this.state.discs,
+            { ...disc, index: this.useIndex(disc.type, isUpgrade) },
+          ],
+        });
+      } else {
+        this._updateStateObj('discs', disc.id, disc);
+      }
+      if (civId) {
+        this.civs.connectDisc(civId, disc.id);
+      }
+      returnVal = this.state.discs.find(disc =>
+        [discId, `${discId}|${civId}`].includes(disc.id)
+      );
+    });
+    return returnVal;
   }
 
   removeQueueItems({ discId, civId }) {
@@ -327,13 +445,20 @@ class World extends StateHandler {
     const disc = this.state.discs.find(disc => disc.id === discId);
     const civsDisconnect = [];
 
-    if (!disc) {
+    if (!disc || this.state.ending) {
       return;
     }
     this.civs.state.civList.forEach(civ => {
       if (civ.connect.includes(discId)) {
         this.civs.disconnectDisc(civ.id, discId);
         civsDisconnect.push(civ.id);
+      }
+    });
+    this.state.discs.forEach(disc => {
+      if (disc.connects?.includes(discId)) {
+        this._updateStateObj('discs', disc.id, {
+          connects: disc.connects.filter(filterId => filterId !== discId),
+        });
       }
     });
     if (disc.onRemove) {
@@ -347,7 +472,7 @@ class World extends StateHandler {
 
   checkDiscRemove() {
     this.state.discs.forEach(disc => {
-      if (['biome'].includes(disc.type)) {
+      if (['biome'].includes(disc.type) || disc.isGlobal) {
         return;
       }
       const isConnected = this.civs.state.civList.some(civ =>
@@ -360,8 +485,15 @@ class World extends StateHandler {
     });
   }
 
-  executeActions({ actions, civId, disc }) {
+  executeActions({ actions, civId, disc, villain }) {
+    if (this.state.ending) {
+      return;
+    }
     let civ = this.civs.state.civList.find(civ => civ.id === civId);
+    let civDamageTaken = civ?.pop;
+    let realAddStat;
+    let logOptions = {};
+
     actions.forEach(action => {
       if (action.createRandomDisc || action.createDisc) {
         const validRandoms = action.createRandomDisc?.filter(discId => {
@@ -377,45 +509,77 @@ class World extends StateHandler {
             !discCheck.requires?.some(reqId => !civ.connect.includes(reqId))
           );
         });
-        const discId =
-          validRandoms?.[Math.floor(Math.random() * validRandoms.length)] ||
-          action.createDisc;
+        const discId = utils.randomEl(validRandoms) || action.createDisc;
         const discCreated = this.createDisc(discId, civId);
         if (!action.skipLog && discCreated) {
-          let log = this.logEvent({
+          logOptions = {
             type: discCreated.type === 'boon' ? 'boonAdded' : 'discCreated',
             discId: discCreated.id,
             civChanges: [{ id: civId, type: 'connect' }],
-            civId,
-          });
-          if (!action.skipMessage) {
-            this.system.showMessage(log);
+            skipMessage: false,
+          };
+        }
+      }
+      if (
+        action.destroyDisc ||
+        action.destroyRandomDisc ||
+        action.destroyRandomDiscByType
+      ) {
+        const validRandoms = this.state.discs.filter(
+          disc =>
+            action.destroyDisc === disc.id ||
+            action.destroyRandomDisc?.includes(disc.id) ||
+            action.destroyRandomDiscByType === disc.type
+        );
+        const discId = utils.randomEl(validRandoms)?.id;
+        if (discId) {
+          const civIds = this.civs.state.civList
+            .filter(civ => civ.connect.includes(discId))
+            .map(civ => civ.id);
+          this.removeDisc(discId);
+          if (!action.skipLog) {
+            logOptions = {
+              type: 'discRemoved',
+              discId,
+              civId: undefined,
+              civIds,
+              skipMessage: false,
+            };
           }
         }
       }
+      if (action.damageCiv) {
+        civ = this.civs.damageCiv(civId, {
+          ...action.damageCiv,
+          labels: disc.labels,
+        });
+        civDamageTaken = utils.round(civDamageTaken - civ.pop);
+      }
       if (action.addStat) {
+        realAddStat = {};
         civ = this.civs._updateStateObj(
           'civList',
           civId,
-          Object.keys(action.addStat).reduce(
-            (obj, key) => ({
+          Object.keys(action.addStat).reduce((obj, key) => {
+            const stat = this.civs.state.civStats.find(
+              stat => stat.name === key
+            );
+            const val = utils.round(civ[key] + action.addStat[key]);
+            const valCapped = Math.min(
+              val,
+              civ[stat.maxName] ?? stat.maxVal ?? val
+            );
+            const newVal = Math.max(
+              valCapped,
+              civ[stat.minName] ?? stat.minVal ?? val
+            );
+            realAddStat[key] = utils.round(newVal - civ[key]);
+            return {
               ...obj,
-              [key]: utils.round(civ[key] + action.addStat[key]),
-            }),
-            {}
-          )
+              [key]: newVal,
+            };
+          }, {})
         );
-      }
-      if (action.createLog) {
-        const log = this.logEvent({
-          type: action.createLog,
-          stats: action.addStat,
-          civId,
-          discId: disc?.id,
-        });
-        if (action.showMessage) {
-          this.system.showMessage(log);
-        }
       }
       if (action.queueDisc || action.queueAction) {
         let queueItem = {
@@ -459,17 +623,35 @@ class World extends StateHandler {
           magic: ['spiritual-offering'],
         };
         this.executeActions({
-          actions: [
-            {
-              createRandomDisc: randomDiscs[action.actionType],
-              skipMessage: true,
-            },
-          ],
+          actions: [{ createRandomDisc: randomDiscs[action.actionType] }],
           civId,
           disc,
         });
       }
-      if (action.addStat?.pop && this.state.turn === civ.popLog.length - 1) {
+      if (action.triggerEnding) {
+        this.setState({ ending: action.triggerEnding });
+        logOptions = {
+          type: 'ending',
+          endingType: action.triggerEnding,
+        };
+      }
+      if (action.createLog || logOptions.type) {
+        const log = this.logEvent({
+          type: `${action.createLog}${villain ? 'Villain' : ''}`,
+          stats: realAddStat || (civDamageTaken && { pop: civDamageTaken }),
+          civId,
+          discId: disc?.id,
+          villainId: villain?.id,
+          ...logOptions,
+        });
+        if (!action.skipMessage) {
+          this.system.showMessage(log);
+        }
+      }
+      if (
+        (action.addStat?.pop || action.damageCiv) &&
+        this.state.turn === civ.popLog.length - 1
+      ) {
         this.civs._updateStateObj('civList', civId, {
           popLog: [
             ...civ.popLog.filter((el, i) => i !== civ.popLog.length - 1),
@@ -496,6 +678,8 @@ class World extends StateHandler {
         xpThisTurn,
         spellId,
         stats,
+        villainId,
+        endingType,
       }
     ) => {
       discId = discId?.split('|')[0];
@@ -542,8 +726,23 @@ class World extends StateHandler {
           .join(', ');
       const statsSum =
         stats && Object.values(stats).reduce((val, sum) => sum + val, 0);
+      const villainTitle =
+        villainId &&
+        this.state.discs.find(disc => disc.id === villainId)?.title;
 
       switch (type) {
+        case 'damageCiv':
+          return {
+            text: `${civTitle} lost ${statsList} from ${discTitle}.`,
+            icon: civId,
+            link: 'civ',
+          };
+        case 'damageCivVillain':
+          return {
+            text: `${civTitle} lost ${statsList} from ${villainTitle}'s ${discTitle}.`,
+            icon: civId,
+            link: 'civ',
+          };
         case 'statGain':
           return {
             text: `${civTitle} ${
@@ -554,15 +753,39 @@ class World extends StateHandler {
           };
         case 'dangerAppeared':
           return {
-            text: `${discTitle} appeared for ${civTitle || civsTitle}.`,
+            text: `${discTitle} appeared${
+              civTitle || civsTitle ? ' for ' + (civTitle || civsTitle) : ''
+            }.`,
+            icon: discId,
+            link: 'disc',
+          };
+        case 'dangerAppearedVillain':
+          return {
+            text: `${villainTitle} created ${discTitle}${
+              civTitle || civsTitle ? ' for ' + (civTitle || civsTitle) : ''
+            }.`,
             icon: discId,
             link: 'disc',
           };
         case 'discCreated':
           return {
-            text: `${discTitle} appeared for ${civTitle || civsTitle}.`,
+            text: `${discTitle} appeared${
+              civTitle || civsTitle ? ' for ' + (civTitle || civsTitle) : ''
+            }.`,
             icon: discId,
             link: 'disc',
+          };
+        case 'discRemoved':
+        case 'discRemovedVillain':
+          return {
+            text: `${discTitle} has been destroyed${
+              villainTitle ? ' by ' + villainTitle : ''
+            }. ${
+              civsTitle || civTitle
+                ? (civsTitle || civTitle) + ' have been disconnected.'
+                : ''
+            }`,
+            icon: discId,
           };
         case 'civLevelUp':
           return {
@@ -590,9 +813,17 @@ class World extends StateHandler {
         case 'sparkSpell':
           return {
             text: `You cast ${spellTitle}${
-              civTitle || civsTitle ? ' for ' + civTitle || civsTitle : ''
+              civTitle || civsTitle ? ' for ' + (civTitle || civsTitle) : ''
             }.`,
             icon: spellId,
+            link: 'disc',
+          };
+        case 'spellVillain':
+          return {
+            text: `${villainTitle} cast ${discTitle}${
+              civTitle || civsTitle ? ' for ' + (civTitle || civsTitle) : ''
+            }.`,
+            icon: villainId,
             link: 'disc',
           };
         case 'sparkLevelUp':
@@ -645,6 +876,11 @@ class World extends StateHandler {
           return {
             text: `${civTitle} have lost the ${discTitle} boon.`,
             icon: discId,
+          };
+        case 'ending':
+          return {
+            text: `The world has ended by ${endingType}.`,
+            icon: 'destroy-world',
           };
         default:
           return {

@@ -146,6 +146,9 @@ export default {
     right: 5px;
     top: 5px;
     z-index: 1;
+    &:hover {
+      background: #fff;
+    }
   }
 }
 

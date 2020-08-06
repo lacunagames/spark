@@ -31,12 +31,20 @@ const defaultState = {
     { name: 'commerce', defaultVal: 0, title: 'Commerce' },
     {
       name: 'food',
-      defaultVal: 10,
+      defaultVal: 20,
       title: 'Food',
       maxName: 'maxFood',
       maxVal: 100,
+      minVal: 0,
     },
     { name: 'expand', defaultVal: 0, title: 'Expand' },
+    {
+      name: 'influence',
+      defaultVal: 0,
+      title: 'Influence',
+      maxVal: 100,
+      minVal: 0,
+    },
   ],
 };
 
@@ -54,7 +62,7 @@ class Civs extends StateHandler {
     for (let i = 0; i < 2; i++) {
       let civ;
       do {
-        civ = allCivs[Math.floor(Math.random() * allCivs.length)];
+        civ = utils.randomEl(allCivs);
       } while (!this.createCiv(civ.id));
     }
     this.system.setState({ muteMessages: false });
@@ -78,6 +86,11 @@ class Civs extends StateHandler {
                     [stat.maxName]: stat.maxVal,
                   }
                 : {}),
+              ...(stat.minName
+                ? {
+                    [stat.minName]: stat.minVal,
+                  }
+                : {}),
             }),
             {}
           ),
@@ -93,10 +106,7 @@ class Civs extends StateHandler {
       ],
     });
     this.world.logEvent({ type: 'civCreated', civId: civId });
-    this.world.createDisc(
-      civ.biomes[Math.floor(Math.random() * civ.biomes.length)],
-      civId
-    );
+    this.world.createDisc(utils.randomEl(civ.biomes), civId);
     civ.startingTechs.forEach(techId => this.world.createDisc(techId, civId));
     civ.startingBoons.forEach(boonId => this.world.createDisc(boonId, civId));
     this.world.executeActions({
@@ -124,11 +134,14 @@ class Civs extends StateHandler {
       this.state.civList.find(civ => civ.id === civId)?.index
     );
     this._removeStateObj('civList', civId);
+    if (this.state.civList.length === 0) {
+      this.world.executeActions({ actions: [{ triggerEnding: 'extinction' }] });
+    }
   }
 
   civTurn() {
     this.state.civList.forEach(civ => {
-      civ = this.turnDamage(civ);
+      civ = this.turnDamage(civ.id);
       const grow = this.state.civStats.reduce(
         (obj, stat) => ({ ...obj, [stat.name]: 0 }),
         {}
@@ -158,25 +171,27 @@ class Civs extends StateHandler {
         });
       }
       grow.food -= (civ.pop + grow.pop) / 5;
-      const newFood = civ.food + grow.food - 20;
+      const newFood = civ.food + grow.food - (civ.pop + grow.pop) / 5;
       grow.pop += newFood / 10;
       if (newFood < 0) {
         grow.food -= newFood / 5;
       }
 
       civ = this._updateStateObj('civList', civ.id, {
-        ...this.state.civStats.reduce(
-          (obj, stat) => ({
+        ...this.state.civStats.reduce((obj, stat) => {
+          const val = utils.round(civ[stat.name] + grow[stat.name]);
+          const valCapped = Math.min(
+            val,
+            civ[stat.maxName] ?? stat.maxVal ?? val
+          );
+          return {
             ...obj,
-            [stat.name]: stat.maxName
-              ? Math.min(
-                  utils.round(civ[stat.name] + grow[stat.name]),
-                  civ[stat.maxName]
-                )
-              : utils.round(civ[stat.name] + grow[stat.name]),
-          }),
-          {}
-        ),
+            [stat.name]: Math.max(
+              valCapped,
+              civ[stat.minName] ?? stat.minVal ?? valCapped
+            ),
+          };
+        }, {}),
       });
 
       if (isLevelUp && civ.pop > 0) {
@@ -227,13 +242,17 @@ class Civs extends StateHandler {
   disconnectDisc(civId, discId) {
     const civ = this.state.civList.find(civ => civ.id === civId);
     const disc = this.world.state.discs.find(disc => disc.id === discId);
-    const boostProps = Object.keys(disc.boost || []).reduce(
-      (obj, key) => ({
+    const boostProps = Object.keys(disc.boost || []).reduce((obj, key) => {
+      const maxStat = this.state.civStats.find(stat => stat.maxName === key);
+      const newVal = utils.round(civ[key] - disc.boost[key]);
+      return {
         ...obj,
-        [key]: civ[key] - disc.boost[key],
-      }),
-      {}
-    );
+        [key]: newVal,
+        ...(maxStat
+          ? { [maxStat.name]: Math.min(civ[maxStat.name], newVal) }
+          : {}),
+      };
+    }, {});
 
     this._updateStateObj('civList', civId, {
       connect: civ.connect.filter(conn => conn !== discId),
@@ -244,9 +263,7 @@ class Civs extends StateHandler {
     }
   }
 
-  turnDamage(civ) {
-    const protects = [];
-    const damages = [];
+  damageCiv(civId, damageObj) {
     const typeMatrix = {
       earth: { strong: ['air'], weak: ['arcane'] },
       fire: { strong: ['water'], weak: ['arcane'] },
@@ -269,41 +286,17 @@ class Civs extends StateHandler {
         ],
       },
     };
-    const setDamage = (damageObj, protectObj) => {
-      let typeMult = 1;
-      if (typeMatrix[protectObj.type].strong?.includes(damageObj.type)) {
-        typeMult = 1.5;
-      } else if (typeMatrix[protectObj.type].weak?.includes(damageObj.type)) {
-        typeMult = 0.5;
-      } else if (protectObj.type !== damageObj.type) {
-        typeMult = 0.85;
-      }
-      if (protectObj.mult) {
-        damageObj.val *= protectObj.mult * (1 / typeMult);
-      }
-      if (protectObj.val && damageObj.val > 0) {
-        let val = protectObj.val * typeMult;
-        damageObj.val -= val;
-        protectObj.val -= damageObj.val + val;
-        damageObj.val = Math.max(damageObj.val, 0);
-        protectObj.val = Math.max(protectObj.val, 0);
-      }
-      return damageObj.val === 0;
-    };
+    const civ = this.state.civList.find(civ => civ.id === civId);
+    const protects = [];
+    damageObj = { ...damageObj };
     civ.connect
       .map(discId => this.world.state.discs.find(disc => disc.id === discId))
       .forEach(item => {
         if (
-          item.turnProtect &&
-          (!item.turnProtect.chance || item.turnProtect.chance < Math.random())
+          item.protect &&
+          (!item.protect.chance || item.protect.chance < Math.random())
         ) {
-          protects.push({ ...item.turnProtect, item });
-        }
-        if (
-          item.turnDamage &&
-          (!item.turnDamage.chance || item.turnDamage.chance < Math.random())
-        ) {
-          damages.push({ ...item.turnDamage, item });
+          protects.push({ ...item.protect, id: item.id, labels: item.labels });
         }
       });
 
@@ -318,27 +311,66 @@ class Civs extends StateHandler {
       validLabels: ['force'],
     });
 
-    damages.forEach(damageObj => {
-      protects.some(protectObj => {
+    protects.some(protectObj => {
+      if (
+        (!protectObj.validLabels ||
+          protectObj.validLabels.some(label =>
+            damageObj.labels?.includes(label)
+          )) &&
+        (!damageObj.validLabels ||
+          damageObj.validLabels.some(label =>
+            protectObj.labels?.includes(label)
+          ))
+      ) {
+        let typeMult = 1;
+        if (typeMatrix[protectObj.type].strong?.includes(damageObj.type)) {
+          typeMult = 1.5;
+        } else if (typeMatrix[protectObj.type].weak?.includes(damageObj.type)) {
+          typeMult = 0.5;
+        } else if (protectObj.type !== damageObj.type) {
+          typeMult = 0.85;
+        }
+        if (protectObj.mult) {
+          damageObj.val *= protectObj.mult * (1 / typeMult);
+        }
+        if (protectObj.val && damageObj.val > 0) {
+          let damageVal = damageObj.val * (1 / typeMult);
+          let protectVal = protectObj.val * typeMult;
+          damageObj.val = Math.max(damageObj.val - protectVal, 0);
+          this.world._updateStateObj('discs', protectObj.id, {
+            protect: {
+              ...protectObj,
+              val: Math.max(protectObj.val - damageVal, 0),
+            },
+          });
+        }
+        return damageObj.val === 0;
+      }
+    });
+    if (damageObj.val) {
+      return this._updateStateObj('civList', civId, {
+        pop: utils.round(civ.pop - damageObj.val),
+      });
+    }
+    return civ;
+  }
+
+  turnDamage(civId) {
+    const damages = [];
+    let civ = this.state.civList.find(civ => civ.id === civId);
+    civ.connect
+      .map(discId => this.world.state.discs.find(disc => disc.id === discId))
+      .forEach(item => {
         if (
-          (!protectObj.validLabels ||
-            protectObj.validLabels.some(label =>
-              damageObj.item.labels?.includes(label)
-            )) &&
-          (!damageObj.validLabels ||
-            damageObj.validLabels.some(label =>
-              protectObj.item.labels?.includes(label)
-            ))
+          item.turnDamage &&
+          (!item.turnDamage.chance || item.turnDamage.chance < Math.random())
         ) {
-          return setDamage(damageObj, protectObj);
+          damages.push({ ...item.turnDamage, labels: item.labels });
         }
       });
-    });
-    return this._updateStateObj('civList', civ.id, {
-      pop: utils.round(
-        civ.pop - damages.reduce((vals, damageObj) => vals + damageObj.val, 0)
-      ),
-    });
+
+    damages.forEach(damageObj => this.damageCiv(civ.id, damageObj));
+    return this.state.civList.find(civ => civ.id === civId);
   }
 }
 

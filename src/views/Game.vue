@@ -5,6 +5,7 @@
       <WorldUI :hovered="hovered" @hoverChange="hoverChanged" ref="world" />
       <SparkUI ref="spark" />
       <MessagesUI @openLink="openLink" />
+      <EndingUI />
     </div>
   </div>
 </template>
@@ -14,6 +15,7 @@ import CivsUI from '@/components/CivsUI';
 import WorldUI from '@/components/WorldUI';
 import SparkUI from '@/components/SparkUI';
 import MessagesUI from '@/components/MessagesUI';
+import EndingUI from '@/components/EndingUI';
 
 export default {
   name: 'Game',
@@ -22,6 +24,7 @@ export default {
     WorldUI,
     SparkUI,
     MessagesUI,
+    EndingUI,
   },
   data() {
     return {

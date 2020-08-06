@@ -73,7 +73,8 @@ export default {
   watch: {
     turn(newTurn) {
       this.logItems = this.$store.getters.world.log[newTurn]?.items;
-      this.showLog = this.logItems.length > 0;
+      this.showLog =
+        this.logItems.length > 0 && !this.$store.getters.world.ending;
     },
   },
 };
@@ -109,6 +110,7 @@ export default {
 
   a {
     font-size: 16px;
+    line-height: 16px;
     padding: 5px 15px 5px 60px;
     height: 55px;
     position: relative;

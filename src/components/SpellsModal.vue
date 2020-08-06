@@ -40,7 +40,6 @@
         </li>
       </ul>
       <SpellDetails
-        :isSpell="true"
         :isReset="isModalOpen"
         :spell="selectedSpell"
         @savedChanges="closeModal"

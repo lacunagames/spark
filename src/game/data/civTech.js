@@ -73,7 +73,7 @@ export default [
     mana: 10,
     desc: 'Bla bla something',
     type: 'knowledge',
-    onConnect: [{ addStat: { military: 1 } }],
+    boost: { military: 1 },
   },
   {
     id: 'smelting',
@@ -96,7 +96,7 @@ export default [
     mana: 10,
     desc: 'Bla bla something',
     type: 'knowledge',
-    onConnect: [{ addStat: { military: 1 } }],
+    boost: { military: 1 },
   },
   {
     id: 'metal-casting',
@@ -119,7 +119,7 @@ export default [
     mana: 10,
     desc: 'Bla bla something',
     type: 'knowledge',
-    onConnect: [{ addStat: { military: 2 } }],
+    boost: { military: 2 },
   },
   {
     id: 'cave-dwellers',
@@ -543,7 +543,7 @@ export default [
     mana: 10,
     desc: 'Bla bla something',
     type: 'knowledge',
-    onConnect: [{ addStat: { military: 2 } }],
+    boost: { military: 2 },
   },
   {
     id: 'gold-creation',
@@ -580,7 +580,7 @@ export default [
     level: 1,
     desc: 'Enables pillaging.',
     type: 'knowledge',
-    onConnect: [{ addStat: { military: 1 } }],
+    boost: { military: 1 },
   },
   {
     id: 'military-strategy',
@@ -593,7 +593,7 @@ export default [
     level: 2,
     desc: 'Enables raids.',
     type: 'knowledge',
-    onConnect: [{ addStat: { military: 1 } }],
+    boost: { military: 1 },
   },
   {
     id: 'combat-training',
@@ -616,7 +616,7 @@ export default [
     level: 3,
     desc: 'Enables battles.',
     type: 'knowledge',
-    onConnect: [{ addStat: { military: 1 } }],
+    boost: { military: 1 },
   },
   {
     id: 'archery',
@@ -628,7 +628,7 @@ export default [
     level: 1,
     desc: 'Bla bla something',
     type: 'knowledge',
-    onConnect: [{ addStat: { military: 1 } }],
+    boost: { military: 1 },
   },
   {
     id: 'exploration',

@@ -169,7 +169,7 @@ export default [
     mana: 8,
     type: 'boon',
     duration: 11,
-    turnProtect: { mult: 0.3, type: 'earth' },
+    protect: { mult: 0.3, type: 'earth' },
   },
   {
     id: 'water-shield',
@@ -181,7 +181,7 @@ export default [
     mana: 8,
     type: 'boon',
     duration: 9,
-    turnProtect: { mult: 0.3, type: 'water' },
+    protect: { mult: 0.3, type: 'water' },
   },
   {
     id: 'force-shield',
@@ -193,7 +193,7 @@ export default [
     mana: 8,
     type: 'boon',
     duration: 9,
-    turnProtect: { mult: 0.3, type: 'air' },
+    protect: { mult: 0.3, type: 'air' },
   },
   {
     id: 'fire-wall',
@@ -205,7 +205,7 @@ export default [
     mana: 7,
     type: 'boon',
     duration: 7,
-    turnProtect: { mult: 0.3, type: 'fire' },
+    protect: { mult: 0.3, type: 'fire' },
   },
 
   // Actions
@@ -330,7 +330,7 @@ export default [
     onDisconnect: [{ queueAction: 'magic' }],
   },
 
-  // Spells
+  // Summons
 
   {
     id: 'mud-golem',
@@ -342,6 +342,73 @@ export default [
     type: 'boon',
     duration: 6,
     turnGrow: { food: 5 },
+    boost: { military: 3 },
+  },
+  {
+    id: 'summon-whisperer',
+    title: 'Summon  whisperer',
+    skill: 'air',
+    category: 'air',
+    mana: 10,
+    desc: 'Bla bla something',
+    type: 'boon',
+    duration: 6,
+    turnGrow: { tech: 2, expand: 3 },
     boost: { military: 2 },
+  },
+  {
+    id: 'stream-spirit',
+    title: 'Stream spirit',
+    skill: 'water',
+    category: 'water',
+    mana: 10,
+    desc: 'Bla bla something',
+    type: 'boon',
+    duration: 6,
+    turnGrow: { food: 3, mana: 3 },
+    boost: { military: 2 },
+  },
+  {
+    id: 'flame-familiar',
+    title: 'Flame familiar',
+    skill: 'fire',
+    category: 'fire',
+    mana: 10,
+    desc: 'Bla bla something',
+    type: 'boon',
+    duration: 5,
+    turnGrow: { warlust: 4, mana: 3 },
+    boost: { military: 3 },
+  },
+  {
+    id: 'wildfire',
+    title: 'Wildfire',
+    skill: 'fire',
+    category: 'fire',
+    mana: 10,
+    desc: 'Bla bla something',
+    type: 'boon',
+    duration: 2,
+    onConnect: [
+      {
+        damageCiv: { val: 10, type: 'fire' },
+        createLog: 'damageCiv',
+      },
+    ],
+    turnDamage: { val: 7, type: 'fire' },
+    labels: ['force'],
+  },
+  {
+    id: 'blizzard',
+    title: 'Blizzard',
+    skill: 'water',
+    category: 'water',
+    mana: 10,
+    desc: 'Bla bla something',
+    type: 'boon',
+    duration: 6,
+    turnDamage: { val: 3, type: 'water' },
+    turnGrow: { food: -10 },
+    labels: ['force'],
   },
 ];

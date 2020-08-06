@@ -75,7 +75,7 @@ class Spark extends StateHandler {
     const disc =
       this.world.state.discs.find(disc => disc.id === discId) ||
       this.state.spells.find(disc => disc.id === discId);
-    const isActive = typeof disc.index === 'number';
+    const isActive = typeof disc?.index === 'number';
     const isConnected = this.civs.state.civList
       .find(civ => civ.id === civId)
       ?.connect.includes(discId);
@@ -88,7 +88,7 @@ class Spark extends StateHandler {
           (disc.duration ? durMult : 1)
         : disc.addCivMana || disc.mana * (disc.type === 'boon' ? 1 : 0.7);
     } else {
-      mana = disc.mana;
+      mana = disc?.mana || 0;
     }
     mana *= this.state.spellDiscounts[disc?.category] || 1;
     mana = Math.max(mana, 1);
@@ -180,6 +180,7 @@ class Spark extends StateHandler {
     const isRemove =
       isActive &&
       !['biome'].includes(disc.type) &&
+      !disc.isPinned &&
       !this.civs.state.civList.find(
         civ => civ.id !== civId && civ.connect.includes(discId)
       );

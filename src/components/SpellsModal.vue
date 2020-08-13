@@ -42,7 +42,7 @@
       <SpellDetails
         :isReset="isModalOpen"
         :spell="selectedSpell"
-        @savedChanges="closeModal"
+        @updateSpell="selectSpell"
       />
     </template>
   </Modal>
@@ -75,7 +75,7 @@ export default {
       this.$store.getters.spark.spells
         .filter(spell => spell.category)
         .forEach(spell => {
-          if (!tabs.find(tab => spell.category === tab.id)) {
+          if (!spell.isHidden && !tabs.find(tab => spell.category === tab.id)) {
             tabs.push({
               id: spell.category,
               title:
@@ -88,12 +88,27 @@ export default {
     },
     filteredSpells() {
       return this.$store.getters.spark.spells
-        .filter(
-          spell =>
+        .filter(spell => {
+          const isActive = this.$store.getters.world.discs.find(
+            disc => disc.id === spell.id
+          );
+          return (
             spell.category &&
             (this.selectedSpellTab === 'all-spells' ||
-              spell.category === this.selectedSpellTab)
-        )
+              spell.category === this.selectedSpellTab) &&
+            !spell.isHidden &&
+            (!spell.skillCreate ||
+              this.$store.getters.spark.skills.find(
+                skill => skill.id === spell.skillCreate
+              ).isActive ||
+              isActive) &&
+            (((!spell.upgrades || isActive) &&
+              !this.$store.getters.world.discs.find(disc =>
+                disc.upgrades?.includes(spell.id)
+              )) ||
+              ['knowledge', 'boon', 'spell'].includes(spell.type))
+          );
+        })
         .map(spell => ({
           ...spell,
           isActive: !!this.$store.getters.world.discs.find(
@@ -120,7 +135,9 @@ export default {
       this.selectedSpellTab = id;
     },
     selectSpell(id) {
-      this.selectedSpell = this.filteredSpells.find(spell => spell.id === id);
+      this.selectedSpell = this.$store.getters.spark.spells.find(
+        spell => spell.id === id
+      );
     },
   },
 };

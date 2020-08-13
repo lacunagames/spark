@@ -1,5 +1,5 @@
 <template>
-  <div class="game">
+  <div class="game" @click="updateClickPos">
     <div class="content">
       <CivsUI :hovered="hovered" @hoverChange="hoverChanged" ref="civs" />
       <WorldUI :hovered="hovered" @hoverChange="hoverChanged" ref="world" />
@@ -31,6 +31,7 @@ export default {
       hovered: '',
       timer: undefined,
       openDisc: undefined,
+      clickPos: { x: 200, y: 200 },
     };
   },
   methods: {
@@ -60,6 +61,9 @@ export default {
         case 'civ':
           return this.$refs.civs.openModal(civ);
       }
+    },
+    updateClickPos(event) {
+      this.gameAction('setClickPos', event.clientX, event.clientY);
     },
   },
 };

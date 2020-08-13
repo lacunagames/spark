@@ -4,6 +4,8 @@ const defaultState = {
   messages: [],
   errorMessage: undefined,
   muteMessages: true,
+  floaters: [],
+  clickPos: { x: 100, y: 100 },
 };
 
 const messageTypes = {
@@ -39,15 +41,6 @@ const messageTypes = {
     type: 'error',
     msg: () => `Nothing to save.`,
   },
-  newManaCharge: {
-    type: 'success',
-    msg: ({ count }) =>
-      `You gained ${count} new mana charge${count > 1 ? 's' : ''}.`,
-  },
-  sparkManaGained: {
-    type: 'success',
-    msg: ({ amount }) => `You gained ${amount} mana.`,
-  },
 };
 
 class System extends StateHandler {
@@ -56,7 +49,10 @@ class System extends StateHandler {
 
     this.state = {};
     this.setState(defaultState);
-    this.initIndexes('msg');
+    this.initIndexes('msg', 'floater');
+    this.floaterQueue = [];
+    this.floaterTimer;
+    this.floating = false;
   }
 
   showMessage({ type, ...args }) {
@@ -65,19 +61,19 @@ class System extends StateHandler {
     }
     const newMessage = {
       ...(messageTypes[type] || messageTypes.default),
-      id: this.useIndex('msg'),
+      index: this.useIndex('msg'),
     };
     const isErr = newMessage.type === 'error';
 
     newMessage.text = newMessage.msg(args);
     newMessage.duration = newMessage.duration || isErr ? 3 : 6;
     if (isErr && this.state.errorMessage) {
-      this.clearMessage(this.state.errorMessage.id);
+      this.clearMessage(this.state.errorMessage.index);
     } else if (!isErr && this.state.messages.length > 2) {
-      this.clearMessage(this.state.messages[0].id);
+      this.clearMessage(this.state.messages[0].index);
     }
     newMessage.timer = setTimeout(
-      () => this.clearMessage(newMessage.id),
+      () => this.clearMessage(newMessage.index),
       newMessage.duration * 1000
     );
     this.setState({
@@ -87,20 +83,62 @@ class System extends StateHandler {
     });
   }
 
-  clearMessage(id) {
+  clearMessage(index) {
     const message =
-      this.state.errorMessage?.id === id
+      this.state.errorMessage?.index === index
         ? this.state.errorMessage
-        : this.state.messages.find(msg => msg.id === id);
+        : this.state.messages.find(msg => msg.index === index);
 
     if (!message) return;
-    this.clearIndex('msg', id);
+    this.clearIndex('msg', index);
     clearTimeout(message.timer);
     if (message.type === 'error') {
       this.setState({ errorMessage: undefined });
     } else {
-      this._removeStateObj('messages', message.id);
+      this._removeStateObj('messages', message.index);
     }
+  }
+
+  setClickPos(x, y) {
+    this.setState({ clickPos: { x, y } });
+  }
+
+  showFloater(type, value, civId) {
+    const floatNext = () => {
+      this.floating = this.floaterQueue.length > 0;
+
+      if (!this.floating) {
+        clearInterval(this.floaterTimer);
+        return;
+      }
+      const index = this.useIndex('floater');
+      this.setState({
+        floaters: [
+          ...this.state.floaters,
+          {
+            index,
+            ...this.floaterQueue[0],
+            timer: setTimeout(() => {
+              this.clearIndex('floater', index);
+              this._removeStateObj('floaters', index);
+            }, 2000),
+          },
+        ],
+      });
+      this.floaterQueue.shift();
+    };
+    setTimeout(() => {
+      this.floaterQueue.push({
+        type,
+        value: `+${value} ${type}`,
+        civId,
+        ...this.state.clickPos,
+      });
+      if (!this.floating) {
+        floatNext();
+        this.floaterTimer = setInterval(floatNext, 450);
+      }
+    }, 0);
   }
 }
 

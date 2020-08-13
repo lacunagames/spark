@@ -169,7 +169,7 @@ export default [
     mana: 8,
     type: 'boon',
     duration: 11,
-    protect: { mult: 0.3, type: 'earth' },
+    protect: { mult: 0.5, type: 'earth' },
   },
   {
     id: 'water-shield',
@@ -181,7 +181,7 @@ export default [
     mana: 8,
     type: 'boon',
     duration: 9,
-    protect: { mult: 0.3, type: 'water' },
+    protect: { mult: 0.5, type: 'water' },
   },
   {
     id: 'force-shield',
@@ -193,7 +193,7 @@ export default [
     mana: 8,
     type: 'boon',
     duration: 9,
-    protect: { mult: 0.3, type: 'air' },
+    protect: { mult: 0.5, type: 'air' },
   },
   {
     id: 'fire-wall',
@@ -205,7 +205,7 @@ export default [
     mana: 7,
     type: 'boon',
     duration: 7,
-    protect: { mult: 0.3, type: 'fire' },
+    protect: { mult: 0.5, type: 'fire' },
   },
 
   // Actions
@@ -323,8 +323,14 @@ export default [
     cost: { stat: 'mana', value: 10 },
     onExpire: [
       {
-        addStat: { wealth: 2, tech: 2, warlust: 2 },
-        createLog: 'statGain',
+        createLog: 'offering',
+        onSkip: [
+          {
+            addStat: { wealth: 2, tech: 2, warlust: 2 },
+            createLog: 'statGain',
+          },
+        ],
+        buttons: ['offering1'],
       },
     ],
     onDisconnect: [{ queueAction: 'magic' }],

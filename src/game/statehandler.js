@@ -9,21 +9,49 @@ class StateHandler {
     return this.state;
   }
 
-  initIndexes(...arr) {
-    arr.forEach(type => (this.indexes[type] = { last: -1, free: [] }));
+  initIndexes(...types) {
+    types.forEach(
+      type => (this.indexes[type] = { last: -1, free: [], custom: [] })
+    );
   }
 
-  useIndex(type, isUpgrade) {
+  useIndex(type, isUpgrade, index) {
+    if (index !== undefined) {
+      if (
+        (this.indexes[type].last >= index &&
+          !this.indexes[type].free.includes(index)) ||
+        this.indexes[type].custom.includes(index)
+      ) {
+        console.log(
+          `useIndex - ${type} error: Index ${index} is taken.`,
+          this.indexes[type]
+        );
+      } else {
+        this.indexes[type].free = this.indexes[type].free.filter(
+          ix => ix !== index
+        );
+        this.indexes[type].custom.push(index);
+        return index;
+      }
+    }
     if (this.indexes[type].free.length) {
       return this.indexes[type].free[isUpgrade ? 'pop' : 'shift']();
     } else {
-      this.indexes[type].last++;
+      do {
+        this.indexes[type].last++;
+      } while (this.indexes[type].custom.includes(this.indexes[type].last));
       return this.indexes[type].last;
     }
   }
 
   clearIndex(type, index) {
-    this.indexes[type].free.push(index);
+    if (this.indexes[type].custom.includes(index)) {
+      this.indexes[type].custom.splice(
+        this.indexes[type].custom.indexOf(index)
+      );
+    } else {
+      this.indexes[type].free.push(index);
+    }
   }
 
   setState(newState) {
@@ -33,15 +61,17 @@ class StateHandler {
 
   _updateStateObj(arrayName, id, updates) {
     const stateArray = this.state[arrayName].map(obj =>
-      obj.id === id ? { ...obj, ...updates } : obj
+      (obj.id ?? obj.index) === id ? { ...obj, ...updates } : obj
     );
 
     this.setState({ [arrayName]: stateArray });
-    return stateArray.find(obj => obj.id === id);
+    return stateArray.find(obj => (obj.id ?? obj.index) === id);
   }
 
   _removeStateObj(arrayName, id) {
-    const stateArray = this.state[arrayName].filter(obj => obj.id !== id);
+    const stateArray = this.state[arrayName].filter(
+      obj => (obj.id ?? obj.index) !== id
+    );
 
     this.setState({ [arrayName]: stateArray });
   }

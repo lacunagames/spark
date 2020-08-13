@@ -12,11 +12,28 @@
       </span>
       <span v-if="isActiveDisc && spell.isGlobal">
         {{
-          spell.duration === 1 ? 'Last turn.' : spell.duration + ' turns left.'
+          spell.currentDuration === 1
+            ? 'Last turn.'
+            : spell.currentDuration + ' turns left.'
         }}
       </span>
     </p>
     <div class="civ-checks" v-show="canModify || selectedCivs.length">
+      <button
+        v-show="canCreate"
+        :class="{ active: isActiveDisc }"
+        @click.prevent="castSpell()"
+      >
+        <span
+          :class="`icon icon-${isActiveDisc ? 'destroy' : 'create'}`"
+        ></span>
+        <span class="title">{{
+          isActiveDisc ? 'Destroy' : spell.type === 'spell' ? 'Cast' : 'Create'
+        }}</span>
+        <span class="mana" :class="{ remove: isActiveDisc }">
+          <span class="inner mana-circle-before">{{ civlessManaCost }}</span>
+        </span>
+      </button>
       <label
         v-for="civ in civList"
         v-show="canModify || selectedCivs.includes(civ.id)"
@@ -56,7 +73,7 @@
             canModify && !civ.requiresDisc && !civ.disabledBy && !civ.upgradedBy
           "
         >
-          <span class="inner">{{ civ.manaCost }}</span>
+          <span class="inner mana-circle-before">{{ civ.manaCost }}</span>
         </span>
         <span class="duration" v-show="civ.duration > 0 && civ.hasDisc">
           ({{
@@ -64,6 +81,19 @@
           }})
         </span>
       </label>
+      <button
+        v-for="upgrade in upgradeList"
+        @click.prevent="castUpgrade(upgrade)"
+        :key="upgrade.id"
+        :class="{ disabled: upgrade.disabledTitle }"
+        :title="upgrade.disabledTitle"
+      >
+        <span :class="`icon icon-${upgrade.icon || upgrade.id}`"></span>
+        <span class="title">Upgrade to {{ upgrade.title }}</span>
+        <span class="mana" v-show="!upgrade.disabledTitle">
+          <span class="inner mana-circle-before">{{ upgrade.mana }}</span>
+        </span>
+      </button>
     </div>
     <div class="villain" v-if="spell.villain">
       <h3>Villain stats</h3>
@@ -96,6 +126,9 @@ export default {
       const activeDisc = this.$store.getters.world.discs.find(
         disc => disc.id === this.spell?.id
       );
+      if (this.gameAction('isGlobalCastSpell', this.spell?.id)) {
+        return [];
+      }
       return this.$store.getters.civs.civList.map(civ => {
         const missingRequired = this.spell?.requires?.find(
           id => !civ.connect.includes(id)
@@ -135,6 +168,75 @@ export default {
         skill => skill.id === this.spell.skill
       )?.isActive;
     },
+    canCreate() {
+      if (!this.spell || !this.canModify) {
+        return false;
+      }
+
+      return (
+        (this.spell.type === 'biome' &&
+          (!this.spell.skillCreate ||
+            this.$store.getters.spark.skills.find(
+              skill => skill.id === this.spell.skillCreate
+            )?.isActive)) ||
+        this.gameAction('isGlobalCastSpell', this.spell?.id)
+      );
+    },
+    civlessManaCost() {
+      return this.canCreate
+        ? this.gameAction('getManaCost', this.spell?.id)
+        : 0;
+    },
+    upgradeList() {
+      if (
+        !this.spell ||
+        !this.canModify ||
+        ['knowledge', 'boon', 'spell'].includes(this.spell.type)
+      ) {
+        return [];
+      }
+      return this.$store.getters.world.allDisclike
+        .filter(disc => disc.upgrades?.includes(this.spell.id))
+        .map(disc => {
+          let disabledTitle;
+          const skill = this.$store.getters.spark.skills.find(
+            skill => skill.id === disc.skill
+          );
+          const skillCreate =
+            disc.skillCreate &&
+            this.$store.getters.spark.skills.find(
+              skill => skill.id === disc.skillCreate
+            );
+          const missingRequiredId = disc.requires?.find(
+            discId =>
+              !this.$store.getters.world.discs.find(disc => disc.id === discId)
+          );
+
+          if (
+            !skill.isActive ||
+            (disc.skillCreate && !skillCreate.isActive) ||
+            missingRequiredId
+          ) {
+            disabledTitle = `Requires ${
+              !skill.isActive
+                ? skill.title
+                : missingRequiredId
+                ? this.$store.getters.world.allDisclike.find(
+                    disc => disc.id === missingRequiredId
+                  )?.title
+                : skillCreate.title
+            }.`;
+          }
+          if (!this.isActiveDisc && !disabledTitle) {
+            disabledTitle = `${this.spell.title} has to be active to upgrade.`;
+          }
+          return {
+            ...disc,
+            mana: disabledTitle ? 0 : this.gameAction('getManaCost', disc.id),
+            disabledTitle,
+          };
+        });
+    },
   },
   watch: {
     spell: {
@@ -154,8 +256,23 @@ export default {
         .map(civ => civ.id);
     },
     castSpell(civId) {
-      if (this.gameAction('castSpell', this.spell.id, civId)) {
-        setTimeout(() => this.updateSelectedCivs(this.spell), 10);
+      const resp = this.gameAction('castSpell', this.spell.id, civId);
+      if (resp) {
+        setTimeout(() => {
+          if (resp.isRemove && resp.discUpgradedFrom) {
+            this.$emit('updateSpell', resp.discUpgradedFrom);
+          } else {
+            this.updateSelectedCivs(this.spell);
+          }
+        });
+      }
+    },
+    castUpgrade(upgrade) {
+      if (upgrade.disabledTitle) {
+        return false;
+      }
+      if (this.gameAction('castSpell', upgrade.id)) {
+        setTimeout(() => this.$emit('updateSpell', upgrade.id), 0);
       }
     },
   },
@@ -200,36 +317,45 @@ export default {
   }
   .civ-checks {
     display: flex;
-    margin: 0 -10px 40px;
+    flex-wrap: wrap;
+    margin: 0 -10px 10px;
     padding-top: 10px;
 
-    label {
+    label,
+    button {
       display: flex;
-      margin: 0 10px 0 0;
+      margin: 0 10px 30px 0;
       position: relative;
       cursor: pointer;
       width: 90px;
       flex-direction: column;
-      text-align: center;
+      align-items: center;
+      height: auto;
+      background: none;
+      padding: 0;
+      font-size: inherit;
+      font-family: inherit;
+      box-shadow: none;
+      line-height: inherit;
+      color: inherit;
     }
 
     input {
       position: absolute;
       left: -9999em;
     }
-    input:checked + .icon {
+    .active .icon {
       border-color: $cGreen;
       & + .title {
         color: $cGreen;
       }
     }
-    input:disabled + .icon {
+    .disabled .icon {
       box-shadow: none;
       filter: grayscale(0.7);
       border-color: #ddd;
     }
-    input:disabled:checked + .icon,
-    .active input:disabled:checked + .icon {
+    .active.disabled .icon {
       border-color: #444;
       & + .title {
         color: $cText;
@@ -237,8 +363,6 @@ export default {
     }
 
     .icon {
-      position: relative;
-      left: 15px;
       display: inline-block;
       width: 60px;
       height: 60px;
@@ -262,16 +386,9 @@ export default {
         color: #fff;
         position: relative;
         &:before {
-          content: '';
           position: absolute;
-          left: 4px;
-          top: 4px;
-          border-radius: 50px;
-          width: 12px;
-          height: 12px;
-          display: inline-block;
-          background: $cMana;
-          border: 2px solid lighten($cMana, 15%);
+          left: 3px;
+          top: 3px;
         }
       }
       &.remove .inner {
@@ -285,7 +402,7 @@ export default {
       font-style: italic;
     }
 
-    label.disabled {
+    .disabled {
       cursor: default;
     }
   }

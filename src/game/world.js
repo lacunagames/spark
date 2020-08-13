@@ -5,27 +5,47 @@ import allTechs from './data/civTech';
 import allSpells from './data/spells';
 import utils from '@/game/utils';
 
-const getPosArray = areas => {
+const getDistance = (a, b) =>
+  Math.sqrt(Math.pow(a.left - b.left, 2) + Math.pow(a.top - b.top, 2));
+const getPosArray = (areas, excludeAreas) => {
   const step = 10;
   const rand = 1;
   const arr = [];
   const orderedArr = [];
-  const distance = (a, b) =>
-    Math.sqrt(Math.pow(a.left - b.left, 2) + Math.pow(a.top - b.top, 2));
 
   areas.forEach(coords => {
     for (let ix = 0; ix < (coords.maxX - coords.minX) / (step * 0.7); ix++) {
       for (let iy = 0; iy < (coords.maxY - coords.minY) / step; iy++) {
-        arr.push({
-          left:
-            coords.minX +
-            ix * step * 0.7 +
-            Math.floor(Math.random() * 20 * rand - 10 * rand) / 10,
-          top:
-            coords.minY +
-            iy * step +
-            Math.floor(Math.random() * 20 * rand - 10 * rand) / 10,
-        });
+        const left =
+          coords.minX +
+          ix * step * 0.7 +
+          Math.floor(Math.random() * 20 * rand - 10 * rand) / 10;
+        const top =
+          coords.minY +
+          iy * step +
+          Math.floor(Math.random() * 20 * rand - 10 * rand) / 10;
+        let isValid = true;
+        for (let iExcl = 0; iExcl < excludeAreas.length; iExcl++) {
+          const area = excludeAreas[iExcl];
+          if (
+            (left >= area.minX &&
+              left <= area.maxX &&
+              top >= area.minY &&
+              top <= area.maxY) ||
+            getDistance(
+              {
+                left: coords.minX + ix * step * 0.7,
+                top: coords.minY + iy * step,
+              },
+              { left: area.cX, top: area.cY }
+            ) <= area.range
+          ) {
+            isValid = false;
+          }
+        }
+        if (isValid) {
+          arr.push({ left, top });
+        }
       }
     }
   });
@@ -37,7 +57,7 @@ const getPosArray = areas => {
       let itemDistance = 1000;
 
       for (let iOrdered = 0; iOrdered < orderedArr.length; iOrdered++) {
-        let currDistance = distance(orderedArr[iOrdered], arr[iArr]);
+        let currDistance = getDistance(orderedArr[iOrdered], arr[iArr]);
 
         if (itemDistance > currDistance) itemDistance = currDistance;
       }
@@ -52,14 +72,14 @@ const getPosArray = areas => {
   return orderedArr;
 };
 
-const positions = {
-  biome: getPosArray([{ minX: 6, minY: 8, maxX: 40, maxY: 40 }]),
-  event: getPosArray([
-    { minX: 66, minY: 8, maxX: 96, maxY: 40 },
-    { minX: 46, minY: 46, maxX: 80, maxY: 66 },
-  ]),
-  action: getPosArray([{ minX: 6, minY: 47, maxX: 40, maxY: 96 }]),
-};
+const positions = getPosArray(
+  [{ minX: 6, minY: 8, maxX: 96, maxY: 96 }],
+  [
+    { minX: 35, minY: 25, maxX: 65, maxY: 55 },
+    { minX: 0, minY: 75, maxX: 40, maxY: 100 },
+    { cX: 100, cY: 100, range: 52 },
+  ]
+);
 
 const defaultState = {
   discs: [],
@@ -77,7 +97,7 @@ class World extends StateHandler {
 
     this.state = {};
     this.setState(defaultState);
-    this.initIndexes('biome', 'action', 'knowledge', 'event', 'boon');
+    this.initIndexes('world', 'knowledge', 'boon');
     setTimeout(() => this.initWorld());
   }
 
@@ -90,24 +110,79 @@ class World extends StateHandler {
     }
   }
 
+  getClosestWorldIndex(index) {
+    const civIndex = typeof index === 'string' && +index.split('civ-')[1];
+    const pos = {
+      left:
+        typeof civIndex === 'number' && civIndex > -1
+          ? this.civs.state.positions[civIndex].left
+          : this.state.positions[index].left,
+      top:
+        typeof civIndex === 'number' && civIndex > -1
+          ? this.civs.state.positions[civIndex].top
+          : this.state.positions[index].top,
+    };
+    let closestIndex = 0;
+    let distance = 1000;
+
+    for (let i = 0; i < this.state.positions.length; i++) {
+      if (
+        i !== index &&
+        !this.state.discs.find(
+          disc => !['knowledge', 'boon'].includes(disc.type) && disc.index === i
+        )
+      ) {
+        const newDistance = getDistance(pos, {
+          left: this.state.positions[i].left,
+          top: this.state.positions[i].top,
+        });
+        if (newDistance < distance) {
+          distance = newDistance;
+          closestIndex = i;
+        }
+      }
+    }
+    return closestIndex;
+  }
+
   nextTurn() {
+    this.system.setState({ muteMessages: true });
+
+    this.state.log[this.state.turn].items.forEach((log, index) => {
+      if (log.onSkip || log.buttons) {
+        if (log.onSkip) {
+          this.executeActions({
+            actions: log.onSkip,
+            civId: log.civId,
+            disc: { id: log.discId },
+          });
+        }
+        this.turnLogStatic(index);
+      }
+    });
+
     this.setState({
       turn: this.state.turn + 1,
       log: [...this.state.log, { id: this.state.turn + 1, items: [] }],
     });
-    this.system.setState({ muteMessages: true });
 
     this.civs.civTurn();
+    this.worldTurn();
+    this.spark.sparkTurn();
 
     this.state.discs.forEach(disc => {
-      if (disc.duration && disc.isGlobal) {
+      if (disc.currentDuration) {
         disc = this._updateStateObj('discs', disc.id, {
-          duration: disc.duration - 1,
+          currentDuration: disc.currentDuration - 1,
         });
-        if (disc.duration === 0) {
+        if (disc.currentDuration === 0) {
           this.removeDisc(disc.id);
           if (disc.onExpire) {
-            this.executeActions({ actions: disc.onExpire, undefined, disc });
+            this.executeActions({
+              actions: disc.onExpire,
+              civId: undefined,
+              disc,
+            });
           }
         }
       } else if (disc.durations) {
@@ -170,8 +245,6 @@ class World extends StateHandler {
       });
     }
 
-    this.worldTurn();
-    this.spark.sparkTurn();
     this.system.setState({ muteMessages: false });
   }
 
@@ -236,10 +309,10 @@ class World extends StateHandler {
                 });
               }
             } else {
-              this.createDisc(
-                actionDisc.id,
-                actionDisc.isGlobal ? undefined : civIds
-              );
+              this.createDisc(actionDisc.id, {
+                civIds: actionDisc.isGlobal ? undefined : civIds,
+                closeToIndex: disc.index,
+              });
               this._updateStateObj('discs', disc.id, {
                 connects: [
                   ...(disc.connects || []),
@@ -258,7 +331,7 @@ class World extends StateHandler {
         this._updateStateObj('discs', disc.id, { villain });
       }
     });
-    if (this.state.turn === 5) {
+    if (this.state.turn === 1) {
       this.createDisc('god-war');
       this.logEvent({ type: 'dangerAppeared', discId: 'god-war' });
     }
@@ -271,12 +344,16 @@ class World extends StateHandler {
               disc.labels?.includes('beast')) &&
             !disc.labels?.includes('noRandom') &&
             !this.state.discs.find(discFind => discFind.id === disc.id) &&
-            this.state.turn / 10 >= disc.turnDamage?.val - 2
+            this.state.turn / 10 >= disc.turnDamage?.val - 2 &&
+            (!disc.requires ||
+              disc.requires.every(discId =>
+                this.state.discs.find(discFind => discFind.id === discId)
+              ))
         )
         .map(disc => disc.id);
       const randomDanger = utils.randomEl(dangerDiscs);
 
-      this.createDisc(randomDanger, civIds);
+      this.createDisc(randomDanger, { civIds });
       this.logEvent({
         type: 'dangerAppeared',
         discId: randomDanger,
@@ -285,7 +362,7 @@ class World extends StateHandler {
     }
   }
 
-  createDisc(discId, civIds) {
+  createDisc(discId, { civIds, closeToIndex } = {}) {
     civIds = Array.isArray(civIds) ? civIds : [civIds];
     let returnVal, isUpgrade;
     civIds.forEach(civId => {
@@ -366,7 +443,7 @@ class World extends StateHandler {
             }
           : {}),
         ...(disc.duration && disc.isGlobal
-          ? { maxDuration: disc.duration }
+          ? { currentDuration: disc.duration }
           : {}),
       };
 
@@ -401,7 +478,17 @@ class World extends StateHandler {
         this.setState({
           discs: [
             ...this.state.discs,
-            { ...disc, index: this.useIndex(disc.type, isUpgrade) },
+            {
+              ...disc,
+              index: this.useIndex(
+                ['knowledge', 'boon'].includes(disc.type) ? disc.type : 'world',
+                isUpgrade,
+                closeToIndex !== undefined &&
+                  !['knowledge', 'boon'].includes(disc.type)
+                  ? this.getClosestWorldIndex(closeToIndex)
+                  : undefined
+              ),
+            },
           ],
         });
       } else {
@@ -466,7 +553,10 @@ class World extends StateHandler {
         this.executeActions({ actions: disc.onRemove, civId, disc })
       );
     }
-    this.clearIndex(disc.type, disc.index);
+    this.clearIndex(
+      ['knowledge', 'boon'].includes(disc.type) ? disc.type : 'world',
+      disc.index
+    );
     this._removeStateObj('discs', disc.id);
   }
 
@@ -510,7 +600,8 @@ class World extends StateHandler {
           );
         });
         const discId = utils.randomEl(validRandoms) || action.createDisc;
-        const discCreated = this.createDisc(discId, civId);
+        const discCreated =
+          discId && this.createDisc(discId, { civIds: civId });
         if (!action.skipLog && discCreated) {
           logOptions = {
             type: discCreated.type === 'boon' ? 'boonAdded' : 'discCreated',
@@ -642,11 +733,20 @@ class World extends StateHandler {
           civId,
           discId: disc?.id,
           villainId: villain?.id,
+          onSkip: action.onSkip,
+          buttons: action.buttons,
           ...logOptions,
         });
         if (!action.skipMessage) {
           this.system.showMessage(log);
         }
+      }
+      if (action.showFloater) {
+        this.system.showFloater(
+          action.showFloater,
+          action.addStat[action.showFloater],
+          civId
+        );
       }
       if (
         (action.addStat?.pop || action.damageCiv) &&
@@ -680,6 +780,7 @@ class World extends StateHandler {
         stats,
         villainId,
         endingType,
+        buttons,
       }
     ) => {
       discId = discId?.split('|')[0];
@@ -729,8 +830,17 @@ class World extends StateHandler {
       const villainTitle =
         villainId &&
         this.state.discs.find(disc => disc.id === villainId)?.title;
+      const buttonDiscs = buttons?.map(id =>
+        this.state.allDisclike.find(disc => disc.id === id)
+      );
 
       switch (type) {
+        case 'offering':
+          return {
+            text: `${civTitle} have performed an Offering ritual asking the spirit world for support.`,
+            icon: civId,
+            buttonDiscs,
+          };
         case 'damageCiv':
           return {
             text: `${civTitle} lost ${statsList} from ${discTitle}.`,
@@ -852,12 +962,16 @@ class World extends StateHandler {
             icon: discId,
           };
         case 'modifyDisc':
-          text = connectCivList.length
+          text = connectCivList?.length
             ? `You cast ${discTitle} for ${connectCivList}. `
             : '';
-          text += disconnectCivList.length
+          text += disconnectCivList?.length
             ? `You removed ${discTitle} from ${disconnectCivList}.`
             : '';
+          text +=
+            !connectCivList?.length && !disconnectCivList?.length
+              ? `You cast ${discTitle}.`
+              : '';
           return {
             text,
             icon: discId,
@@ -893,6 +1007,7 @@ class World extends StateHandler {
       items: [
         ...this.state.log[this.state.turn].items,
         {
+          index: this.state.log[this.state.turn].items.length,
           type,
           ...args,
           ...getDynamic(type, args),
@@ -902,6 +1017,21 @@ class World extends StateHandler {
     return this.state.log[this.state.turn].items[
       this.state.log[this.state.turn].items.length - 1
     ];
+  }
+
+  turnLogStatic(index) {
+    const log = this.state.log[this.state.turn].items.find(
+      item => item.index === index
+    );
+    // eslint-disable-next-line no-unused-vars
+    const { onSkip, buttons, buttonDiscs, ...logUpdated } = log;
+    this._updateStateObj('log', this.state.turn, {
+      items: [
+        ...this.state.log[this.state.turn].items.slice(0, index),
+        { ...logUpdated, buttonsRemoved: true },
+        ...this.state.log[this.state.turn].items.slice(index + 1),
+      ],
+    });
   }
 
   getFilteredLog({

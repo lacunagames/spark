@@ -64,7 +64,7 @@ export default {
     overflow-x: auto;
     position: relative;
     width: 500px;
-    z-index: 2;
+    z-index: 110;
     padding: 20px;
   }
   img {

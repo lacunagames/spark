@@ -91,3 +91,36 @@
 .pull-up {
   margin-top: -10px;
 }
+
+.mana-circle,
+.mana-circle-before:before,
+.mana-charge-circle,
+.mana-charge-circle-before:before,
+.influence-circle,
+.influence-circle-before:before {
+  content: '';
+  border-radius: 50px;
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  background: #5204a7;
+  border: 2px solid #7706f2;
+}
+.mana-charge-circle,
+.mana-charge-circle-before:before {
+  background-color: #35ced5;
+  border-color: #0463a7;
+  transform: rotate(45deg);
+  border-radius: 5px;
+}
+.influence-circle,
+.influence-circle-before:before {
+  background: #edd447;
+  border: 2px dashed #5c4f04;
+  box-shadow: inset 0px 0px 0px 2px #d3c579;
+}
+.checked-before:before {
+  content: '✓';
+  font-size: 20px;
+  color: $cGreen;
+}

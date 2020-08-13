@@ -20,6 +20,26 @@ const spells = [
     onCast: [{ addStat: { mana: 20 } }],
   },
   {
+    id: 'offering1',
+    title: 'Support',
+    skill: 'general',
+    category: 'general',
+    isHidden: true,
+    skipLog: true,
+    mana: 5,
+    desc: 'Bla bla somethingg',
+    type: 'spell',
+
+    onCast: [
+      {
+        addStat: { wealth: 3, tech: 3, warlust: 3 },
+        createLog: 'statGain',
+        skipMessage: true,
+      },
+      { addStat: { influence: 3 }, showFloater: 'influence' },
+    ],
+  },
+  {
     id: 'lightning-strike',
     title: 'Lightning strike',
     skill: 'air',
@@ -56,9 +76,9 @@ const spells = [
   {
     id: 'destroy-biome',
     title: 'Destroy biome',
-    skill: 'chaos',
-    category: 'chaos',
-    mana: 40,
+    skill: 'earth',
+    category: 'earth',
+    mana: 1,
     desc: 'Destroys a random biome.',
     type: 'spell',
     skipLog: true,

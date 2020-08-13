@@ -9,22 +9,22 @@
         </button>
       </div>
 
-      <button class="mana-orb" @click="openModal('spells')">
-        <span class="inner">
+      <div class="mana-orb">
+        <button class="inner" @click="openModal('spells')">
           <span
             class="filled"
             :style="{ top: 100 - (spark.mana / spark.maxMana) * 100 + '%' }"
           ></span>
           <span>{{ spark.mana }}</span>
-        </span>
-        <span
+        </button>
+        <button
           class="charges"
-          @click.stop="gameAction('popManaCharge')"
+          @click="gameAction('popManaCharge')"
           :title="`Use charge to gain ${spark.chargeToMana} mana`"
         >
           <span v-for="index in spark.manaCharges" :key="index"></span>
-        </span>
-      </button>
+        </button>
+      </div>
 
       <button class="xp-orb" @click="openModal('skills')">
         <span class="inner" :class="{ flipped: isNewLevelUp }">
@@ -62,6 +62,7 @@ export default {
     return {
       sparkLevel: 1,
       isNewLevelUp: true,
+      manaRestored: 0,
     };
   },
   computed: {
@@ -177,30 +178,39 @@ export default {
     .inner {
       background-color: #4b4258;
       border: 2px solid #3f3d34;
+      font-family: $font;
+      font-size: 26px;
     }
     span {
       position: relative;
     }
-    .charges span {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      background-color: #8235d5;
-      border: 2px solid $cMana;
-      border-radius: 333px;
+    .charges {
+      height: 0;
+      padding: 0;
       position: absolute;
-      top: -75px;
-      left: 15px;
-      &:hover {
-        background-color: lighten(#8235d5, 10%);
-      }
-      &:nth-child(2) {
-        top: -60px;
-        left: -12px;
-      }
-      &:nth-child(3) {
-        top: -60px;
-        left: 42px;
+
+      span {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        background-color: #35ced5;
+        border: 2px solid #0463a7;
+        transform: rotate(45deg);
+        border-radius: 8px;
+        position: absolute;
+        top: -85px;
+        left: 15px;
+        &:hover {
+          background-color: lighten(#35ced5, 10%);
+        }
+        &:nth-child(2) {
+          top: -70px;
+          left: -12px;
+        }
+        &:nth-child(3) {
+          top: -70px;
+          left: 42px;
+        }
       }
     }
 
@@ -227,7 +237,7 @@ export default {
   .turn-button {
     position: absolute;
     bottom: 20px;
-    right: 340px;
+    right: 310px;
     padding: 10px;
   }
 }

@@ -1,13 +1,27 @@
 <template>
   <div class="world">
+    <div
+      v-for="(pos, index) in world.positions"
+      :key="index"
+      :style="{
+        position: 'absolute',
+        left: pos.left + '%',
+        top: pos.top + '%',
+        width: '5px',
+        height: '5px',
+        background: 'red',
+        borderRadius: '10px',
+        opacity: 0.6,
+      }"
+    ></div>
     <ul class="discs">
       <li
         v-for="disc in realDiscs"
         :key="disc.id"
         :class="disc.type"
         :style="{
-          left: world.positions[disc.type][disc.index].left + '%',
-          top: world.positions[disc.type][disc.index].top + '%',
+          left: world.positions[disc.index].left + '%',
+          top: world.positions[disc.index].top + '%',
         }"
       >
         <a
@@ -23,7 +37,7 @@
             :width="3"
             emptyColor="222"
             fillColor="ee1e26"
-            :value="(disc.duration - 1) / disc.maxDuration"
+            :value="(disc.currentDuration - 1) / disc.duration"
           />
         </a>
       </li>
@@ -33,7 +47,7 @@
         <SpellDetails
           :isReset="isModalOpen"
           :spell="selectedDisc"
-          @savedChanges="closeModal"
+          @updateSpell="updateSelectedDisc"
         />
       </template>
     </Modal>
@@ -86,6 +100,11 @@ export default {
     },
     closeModal() {
       this.isModalOpen = false;
+    },
+    updateSelectedDisc(discId) {
+      this.selectedDisc =
+        this.$store.getters.world.discs.find(disc => disc.id === discId) ||
+        this.$store.getters.world.allDisclike.find(disc => disc.id === discId);
     },
   },
 };

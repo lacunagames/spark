@@ -34,7 +34,7 @@
           </svg>
         </li>
         <li
-          v-for="skill in spark.skills"
+          v-for="skill in skills"
           :key="skill.id"
           :style="{ left: `${skill.pos[0]}%`, top: `${skill.pos[1]}%` }"
         >
@@ -73,13 +73,15 @@ export default {
     spark() {
       return this.$store.getters.spark;
     },
+    skills() {
+      return this.$store.getters.spark.skills.filter(skill => !skill.isHidden);
+    },
     skillConnections() {
-      const skills = this.$store.getters.spark.skills;
       const skillConnections = [];
 
-      skills.forEach(skill => {
+      this.skills.forEach(skill => {
         skill.connect?.forEach(otherName => {
-          const otherSkill = skills.find(skill => skill.id === otherName);
+          const otherSkill = this.skills.find(skill => skill.id === otherName);
 
           skillConnections.push({
             x1: skill.pos[0],
@@ -92,7 +94,7 @@ export default {
         });
 
         skill.requires?.forEach(otherName => {
-          const otherSkill = skills.find(skill => skill.id === otherName);
+          const otherSkill = this.skills.find(skill => skill.id === otherName);
 
           skillConnections.push({
             x1: skill.pos[0],

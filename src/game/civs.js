@@ -4,12 +4,12 @@ import utils from '@/game/utils';
 
 const defaultState = {
   positions: [
-    { left: 44, top: 12 },
-    { left: 56, top: 12 },
-    { left: 44, top: 28 },
-    { left: 56, top: 28 },
-    { left: 44, top: 44 },
-    { left: 56, top: 44 },
+    { left: 45, top: 28 },
+    { left: 57, top: 28 },
+    { left: 45, top: 44 },
+    { left: 57, top: 44 },
+    { left: 45, top: 60 },
+    { left: 57, top: 60 },
   ],
   civList: [],
   civStats: [
@@ -25,7 +25,7 @@ const defaultState = {
     { name: 'science', defaultVal: 0, title: 'Science' },
     { name: 'warlust', defaultVal: 30, title: 'Warlust' },
     { name: 'military', defaultVal: 0, title: 'Military power' },
-    { name: 'mana', defaultVal: 0, title: 'Mana' },
+    { name: 'mana', defaultVal: 50, title: 'Mana' },
     { name: 'magic', defaultVal: 0, title: 'Magic power' },
     { name: 'wealth', defaultVal: 0, title: 'Wealth' },
     { name: 'commerce', defaultVal: 0, title: 'Commerce' },
@@ -105,10 +105,14 @@ class Civs extends StateHandler {
         },
       ],
     });
-    this.world.logEvent({ type: 'civCreated', civId: civId });
-    this.world.createDisc(utils.randomEl(civ.biomes), civId);
-    civ.startingTechs.forEach(techId => this.world.createDisc(techId, civId));
-    civ.startingBoons.forEach(boonId => this.world.createDisc(boonId, civId));
+    this.world.logEvent({ type: 'civCreated', civId });
+    this.world.createDisc(utils.randomEl(civ.biomes), { civIds: civId });
+    civ.startingTechs.forEach(techId =>
+      this.world.createDisc(techId, { civIds: civId })
+    );
+    civ.startingBoons.forEach(boonId =>
+      this.world.createDisc(boonId, { civIds: civId })
+    );
     this.world.executeActions({
       actions: [
         { queueAction: 'war' },
@@ -128,7 +132,7 @@ class Civs extends StateHandler {
     }
     this._updateStateObj('civList', civId, { connect: [] });
     this.world.checkDiscRemove();
-    this.world.removeQueueItems({ civId: civId });
+    this.world.removeQueueItems({ civId });
     this.clearIndex(
       'civList',
       this.state.civList.find(civ => civ.id === civId)?.index
@@ -242,6 +246,11 @@ class Civs extends StateHandler {
   disconnectDisc(civId, discId) {
     const civ = this.state.civList.find(civ => civ.id === civId);
     const disc = this.world.state.discs.find(disc => disc.id === discId);
+    if (!civ || !disc) {
+      return console.log(
+        `disconnectDisc error - civId: ${civId}, discId: ${discId}.`
+      );
+    }
     const boostProps = Object.keys(disc.boost || []).reduce((obj, key) => {
       const maxStat = this.state.civStats.find(stat => stat.maxName === key);
       const newVal = utils.round(civ[key] - disc.boost[key]);

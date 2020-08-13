@@ -14,18 +14,21 @@ const defaultState = {
   xp: 0,
   xpNextTurn: 0,
 
-  mana: 1000,
+  mana: 10,
   maxMana: 15,
   manaPerTurn: 3,
+  manaRestoreMultiplier: 0,
+  manaToRestore: 0,
   manaToXpMultiplier: 0.2,
 
-  manaCharges: 1,
+  manaCharges: 3,
   maxManaCharges: 3,
   manaChargeSkills: [],
-  manaChargeStep: 0,
-  manaChargeMaxStep: 10,
-  manaToChargeMultiplier: 0.1,
+  manaChargeStep: 0, // Stores progress to next charge
+  manaChargeMaxStep: 100,
   chargeToMana: 15,
+
+  discUpgradedFrom: {},
 };
 
 class Spark extends StateHandler {
@@ -34,6 +37,18 @@ class Spark extends StateHandler {
 
     this.state = {};
     this.setState(defaultState);
+    setTimeout(() => {
+      this.setState({
+        spells: [
+          ...this.state.spells,
+          ...this.world.state.allDisclike.filter(disc =>
+            this.state.skills.find(
+              skill => skill.id === disc.skill && skill.isActive
+            )
+          ),
+        ],
+      });
+    }, 0);
   }
 
   sparkTurn() {
@@ -71,6 +86,16 @@ class Spark extends StateHandler {
     }
   }
 
+  isGlobalCastSpell(spellId) {
+    const spell = this.state.spells.find(spell => spell.id === spellId);
+
+    return spell
+      ? spell.isGlobal ||
+          (spell.type === 'spell' &&
+            !spell.onCast.some(action => action.damageCiv || action.addStat))
+      : false;
+  }
+
   getManaCost(discId, civId) {
     const disc =
       this.world.state.discs.find(disc => disc.id === discId) ||
@@ -80,28 +105,41 @@ class Spark extends StateHandler {
       .find(civ => civ.id === civId)
       ?.connect.includes(discId);
     let mana = 0;
-    if (isActive) {
-      const durMult =
-        (disc.durations?.[civId] || disc.duration) / disc.duration;
-      mana = isConnected
-        ? (disc.removeCivMana || disc.mana * (disc.type === 'boon' ? 1 : 0.8)) *
-          (disc.duration ? durMult : 1)
-        : disc.addCivMana || disc.mana * (disc.type === 'boon' ? 1 : 0.7);
-    } else {
+    const durMult =
+      (disc.durations?.[civId] || disc.currentDuration) / disc.duration;
+
+    if (civId === undefined) {
       mana = disc?.mana || 0;
+      if (isActive && disc?.type === 'biome') {
+        this.civs.state.civList.forEach(civ => {
+          if (civ.connect.includes(discId)) {
+            mana +=
+              (disc.removeCivMana || disc.mana * 0.8) *
+              (disc.duration ? durMult : 1);
+          }
+        });
+      }
+    } else {
+      if (isActive) {
+        mana = isConnected
+          ? (disc.removeCivMana ||
+              disc.mana * (disc.type === 'boon' ? 1 : 0.8)) *
+            (disc.duration ? durMult : 1)
+          : disc.addCivMana || disc.mana * (disc.type === 'boon' ? 1 : 0.8);
+      } else {
+        mana = disc?.mana || 0;
+        if (disc.type === 'biome') {
+          mana += disc.addCivMana || disc.mana * 0.8;
+        }
+      }
     }
     mana *= this.state.spellDiscounts[disc?.category] || 1;
-    mana = Math.max(mana, 1);
-    return utils.round(mana, 0);
+    return utils.round(Math.max(mana, 1), 0);
   }
 
   updateManaCharges(manaCost, category) {
     if (this.state.manaChargeSkills.includes(category)) {
-      this.setState({
-        manaChargeStep:
-          this.state.manaChargeStep +
-          utils.round(manaCost * this.state.manaToChargeMultiplier, 2),
-      });
+      this.setState({ manaChargeStep: this.state.manaChargeStep + manaCost });
     }
     if (this.state.manaChargeStep >= this.state.manaChargeMaxStep) {
       const oldCharges = this.state.manaCharges;
@@ -116,11 +154,26 @@ class Spark extends StateHandler {
         this.popManaCharge(this.state.manaCharges - this.state.maxManaCharges);
       }
       if (oldCharges < this.state.manaCharges) {
-        this.system.showMessage({
-          type: 'newManaCharge',
-          count: this.state.manaCharges - oldCharges,
-        });
+        this.system.showFloater('charge', this.state.manaCharges - oldCharges);
       }
+    }
+    // Mana restore
+    const manaPre = this.state.mana;
+    const manaToRestore = utils.round(
+      this.state.manaToRestore + manaCost * this.state.manaRestoreMultiplier
+    );
+    this.setState({
+      manaToRestore: utils.round(manaToRestore % 1),
+      mana:
+        this.state.mana > this.state.maxMana
+          ? this.state.mana
+          : Math.min(
+              Math.floor(this.state.mana + manaToRestore),
+              this.state.maxMana
+            ),
+    });
+    if (manaPre < this.state.mana) {
+      this.system.showFloater('mana', this.state.mana - manaPre);
     }
   }
 
@@ -130,19 +183,12 @@ class Spark extends StateHandler {
         mana: this.state.mana + this.state.chargeToMana * popCount,
         manaCharges: this.state.manaCharges - popCount,
       });
-      this.system.showMessage({
-        type: 'sparkManaGained',
-        amount: this.state.chargeToMana * popCount,
-      });
+      this.system.showFloater('mana', this.state.chargeToMana * popCount);
     }
   }
 
   castSpell(spellId, civId) {
     const spell = this.state.spells.find(spell => spell.id === spellId);
-
-    if (spell.onCast) {
-      this.world.executeActions({ actions: spell.onCast, civId, disc: spell });
-    }
 
     if (spell.type !== 'spell' || spell.createDisc) {
       return this.modifyDisc(spell.createDisc || spellId, civId);
@@ -153,6 +199,10 @@ class Spark extends StateHandler {
     if (manaCost > this.state.mana) {
       this.system.showMessage({ type: 'notEnoughMana' });
       return false;
+    }
+
+    if (spell.onCast) {
+      this.world.executeActions({ actions: spell.onCast, civId, disc: spell });
     }
 
     this.setState({
@@ -176,14 +226,26 @@ class Spark extends StateHandler {
       this.world.state.allDisclike.find(disc => disc.id === discId);
     const civ = this.civs.state.civList.find(civ => civ.id === civId);
     const isActive = typeof disc.index === 'number';
-    const isConnect = !civ.connect.includes(discId);
+    const isConnect = civ && !civ.connect.includes(discId);
     const isRemove =
-      isActive &&
-      !['biome'].includes(disc.type) &&
-      !disc.isPinned &&
-      !this.civs.state.civList.find(
-        civ => civ.id !== civId && civ.connect.includes(discId)
-      );
+      (isActive &&
+        civ &&
+        !['biome'].includes(disc.type) &&
+        !disc.isGlobal &&
+        !this.civs.state.civList.find(
+          civ => civ.id !== civId && civ.connect.includes(discId)
+        )) ||
+      (isActive && !civ);
+    const upgradedDiscId =
+      !civId &&
+      disc.upgrades
+        ?.map(id => this.world.state.discs.find(disc => disc.id === id))
+        .filter(disc => disc)[0]?.id;
+    const upgradedCivIds =
+      upgradedDiscId &&
+      this.civs.state.civList
+        .filter(civ => civ.connect.includes(upgradedDiscId))
+        .map(civ => civ.id);
     const manaCost = this.getManaCost(discId, civId);
 
     if (manaCost > this.state.mana) {
@@ -199,7 +261,16 @@ class Spark extends StateHandler {
     });
 
     if (!isActive || isConnect) {
-      this.world.createDisc(discId, civId);
+      this.world.createDisc(discId, { civIds: upgradedCivIds || civId });
+      if (upgradedDiscId) {
+        this.setState({
+          discUpgradedFrom: {
+            ...this.state.discUpgradedFrom,
+            [discId]:
+              this.state.discUpgradedFrom[upgradedDiscId] || upgradedDiscId,
+          },
+        });
+      }
     } else if (!isConnect && !isRemove) {
       this.civs.disconnectDisc(civId, discId);
     }
@@ -209,7 +280,15 @@ class Spark extends StateHandler {
         this.world.logEvent({ type: 'removeDisc', discId, civId })
       );
       if (disc.onCancel) {
-        this.world.executeActions({ actions: disc.onCancel, civId, disc });
+        this.civs.state.civList.forEach(civ => {
+          if (civ.connect.includes(discId)) {
+            this.world.executeActions({
+              actions: disc.onCancel,
+              civId: civ.id,
+              disc,
+            });
+          }
+        });
       }
       this.world.removeDisc(discId);
     } else {
@@ -217,19 +296,22 @@ class Spark extends StateHandler {
         this.world.logEvent({
           type: 'modifyDisc',
           discId,
-          civChanges: [
-            { id: civId, type: isConnect ? 'connect' : 'disconnect' },
-          ],
+          civChanges:
+            civId === undefined
+              ? undefined
+              : [{ id: civId, type: isConnect ? 'connect' : 'disconnect' }],
         })
       );
     }
     this.updateManaCharges(manaCost, disc.category);
-    return true;
+    return { isRemove, discUpgradedFrom: this.state.discUpgradedFrom[disc.id] };
   }
 
   learnSkill(skillId) {
     const skill = this.state.skills.find(skill => skill.id === skillId);
-    const hasActiveSkills = this.state.skills.some(skill => skill.isActive);
+    const hasActiveSkills = this.state.skills.some(
+      skill => skill.isActive && !skill.isHidden
+    );
 
     if (skill.isActive) {
       this.system.showMessage({
@@ -247,6 +329,9 @@ class Spark extends StateHandler {
         skillPoints: this.state.skillPoints - 1,
         manaPerTurn: this.state.manaPerTurn + (skill.effect?.manaPerTurn || 0),
         maxMana: this.state.maxMana + (skill.effect?.maxMana || 0),
+        manaRestoreMultiplier:
+          this.state.manaRestoreMultiplier +
+          (skill.effect?.manaRestoreMultiplier || 0),
         manaChargeSkills: [
           ...this.state.manaChargeSkills,
           ...(skill.effect?.manaCharge ? [skill.effect?.manaCharge] : []),

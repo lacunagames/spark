@@ -135,7 +135,10 @@
                       title="Remove boon"
                       @click="gameAction('modifyDisc', item.id, selectedCiv.id)"
                     >
-                      <span class="mana">{{ item.removeCost }}</span> ✕
+                      <span class="mana mana-circle-before">{{
+                        item.removeCost
+                      }}</span>
+                      ✕
                     </button>
                     <h4>{{ item.title }}</h4>
                     <p>{{ item.desc }}</p>
@@ -271,8 +274,8 @@ export default {
           connections.push({
             x1: civPos.left,
             y1: civPos.top,
-            x2: world.positions[disc.type][disc.index].left,
-            y2: world.positions[disc.type][disc.index].top,
+            x2: world.positions[disc.index].left,
+            y2: world.positions[disc.index].top,
             isModify: false,
             isPositive: disc.type === 'biome',
             isNegative:
@@ -294,10 +297,10 @@ export default {
           )
             return;
           connections.push({
-            x1: world.positions[otherDisc.type][otherDisc.index].left,
-            y1: world.positions[otherDisc.type][otherDisc.index].top,
-            x2: world.positions[disc.type][disc.index].left,
-            y2: world.positions[disc.type][disc.index].top,
+            x1: world.positions[otherDisc.index].left,
+            y1: world.positions[otherDisc.index].top,
+            x2: world.positions[disc.index].left,
+            y2: world.positions[disc.index].top,
             isModify: true,
             isPositive: conn.isPositive,
             isNegative: conn.isNegative,
@@ -641,16 +644,9 @@ export default {
         padding-right: 5px;
         margin-right: 3px;
         &:before {
-          content: '';
           position: absolute;
-          left: 4px;
-          top: 4px;
-          border-radius: 50px;
-          width: 12px;
-          height: 12px;
-          display: inline-block;
-          background: $cMana;
-          border: 2px solid lighten($cMana, 15%);
+          left: 3px;
+          top: 3px;
         }
       }
 

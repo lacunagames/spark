@@ -104,6 +104,7 @@ class System extends StateHandler {
   }
 
   showFloater(type, value, civId) {
+    const isPercent = ['influence'].includes(type);
     const floatNext = () => {
       this.floating = this.floaterQueue.length > 0;
 
@@ -130,7 +131,7 @@ class System extends StateHandler {
     setTimeout(() => {
       this.floaterQueue.push({
         type,
-        value: `+${value} ${type}`,
+        value: `+${value}${isPercent ? '%' : ''} ${type}`,
         civId,
         ...this.state.clickPos,
       });

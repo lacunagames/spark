@@ -133,6 +133,7 @@ export default {
         const missingRequired = this.spell?.requires?.find(
           id => !civ.connect.includes(id)
         );
+
         return {
           ...civ,
           requiresDisc:
@@ -140,12 +141,9 @@ export default {
             this.$store.getters.world.allDisclike.find(
               disc => disc.id === missingRequired
             ),
-          upgradedBy: this.$store.getters.world.discs.find(disc =>
-            civ.connect.find(
-              conn =>
-                conn === disc.id && disc.upgrades?.includes(this.spell?.id)
-            )
-          ),
+          upgradedBy:
+            this.spell &&
+            this.gameAction('getDiscUpgrade', this.spell.id, civ.id),
           disabledBy: this.$store.getters.world.discs.find(disc =>
             civ.connect.find(
               conn =>

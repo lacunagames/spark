@@ -145,6 +145,33 @@ class World extends StateHandler {
     return closestIndex;
   }
 
+  getDiscUpgrade(discId, civId) {
+    const upgradeDiscs = [];
+    this.state.allDisclike.forEach(disc => {
+      if (disc.upgrades?.includes(discId)) {
+        upgradeDiscs.push(disc);
+      }
+    });
+    let activeUpgrade = upgradeDiscs.find(upg =>
+      civId
+        ? this.civs.state.civList
+            .find(civ => civ.id === civId)
+            ?.connect.includes(upg.id)
+        : this.state.discs.find(disc => disc.id === upg.id)
+    );
+    let i = 0;
+    while (!activeUpgrade && i < upgradeDiscs.length) {
+      activeUpgrade = this.getDiscUpgrade(upgradeDiscs[i].id, civId);
+      i++;
+    }
+    if (activeUpgrade && typeof activeUpgrade.index !== 'number') {
+      activeUpgrade = this.state.discs.find(
+        disc => disc.id === activeUpgrade.id
+      );
+    }
+    return activeUpgrade;
+  }
+
   nextTurn() {
     this.system.setState({ muteMessages: true });
 
@@ -741,10 +768,10 @@ class World extends StateHandler {
           this.system.showMessage(log);
         }
       }
-      if (action.showFloater) {
+      if (action.showFloater && realAddStat[action.showFloater] !== 0) {
         this.system.showFloater(
           action.showFloater,
-          action.addStat[action.showFloater],
+          realAddStat[action.showFloater],
           civId
         );
       }
@@ -960,6 +987,7 @@ class World extends StateHandler {
           return {
             text: `${discTitle} has been added for ${connectCivList}.`,
             icon: discId,
+            link: 'disc',
           };
         case 'modifyDisc':
           text = connectCivList?.length

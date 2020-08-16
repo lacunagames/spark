@@ -107,7 +107,7 @@ class Civs extends StateHandler {
     });
     this.world.logEvent({ type: 'civCreated', civId });
     this.world.createDisc(utils.randomEl(civ.biomes), { civIds: civId });
-    civ.startingTechs.forEach(techId =>
+    [...civ.startingTechs, 'code-of-laws'].forEach(techId =>
       this.world.createDisc(techId, { civIds: civId })
     );
     civ.startingBoons.forEach(boonId =>

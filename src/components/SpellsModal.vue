@@ -103,9 +103,7 @@ export default {
               ).isActive ||
               isActive) &&
             (((!spell.upgrades || isActive) &&
-              !this.$store.getters.world.discs.find(disc =>
-                disc.upgrades?.includes(spell.id)
-              )) ||
+              !this.gameAction('getDiscUpgrade', spell.id)) ||
               ['knowledge', 'boon', 'spell'].includes(spell.type))
           );
         })

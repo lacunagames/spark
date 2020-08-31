@@ -41,14 +41,14 @@ const stateChanged = (moduleName, newState) => {
 };
 
 const modules = {
-  spark: new Spark(newState => stateChanged('spark', newState)),
+  system: new System(newState => stateChanged('system', newState)),
   world: new World(newState => stateChanged('world', newState)),
   civs: new Civs(newState => stateChanged('civs', newState)),
-  system: new System(newState => stateChanged('system', newState)),
+  spark: new Spark(newState => stateChanged('spark', newState)),
 };
 
 Object.keys(modules).forEach(moduleName => {
-  state[moduleName] = modules[moduleName].getState();
+  state[moduleName] = modules[moduleName].state;
   getters[moduleName] = state => state[moduleName];
   mutations[moduleName] = newState => (state[moduleName] = newState);
 

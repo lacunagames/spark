@@ -55,7 +55,6 @@ class Civs extends StateHandler {
     this.state = {};
     this.setState(defaultState);
     this.initIndexes('civList');
-    setTimeout(() => this.initCivs(), 0);
   }
 
   initCivs() {
@@ -65,12 +64,11 @@ class Civs extends StateHandler {
         civ = utils.randomEl(allCivs);
       } while (!this.createCiv(civ.id));
     }
-    this.system.setState({ muteMessages: false });
   }
 
   createCiv(civId) {
     let civ = allCivs.find(civ => civ.id === civId);
-    if (this.state.civList.find(civ => civ.id === civId)) {
+    if (this._find('civList', civId)) {
       return false;
     }
     this.setState({
@@ -97,6 +95,7 @@ class Civs extends StateHandler {
           ...civ,
           level: 1,
           index: this.useIndex('civList'),
+          influenceDecay: 0.01,
           connect: [],
           popLog: [
             civ.pop ||
@@ -106,12 +105,12 @@ class Civs extends StateHandler {
       ],
     });
     this.world.logEvent({ type: 'civCreated', civId });
-    this.world.createDisc(utils.randomEl(civ.biomes), { civIds: civId });
+    this.world.createDisc(utils.randomEl(civ.biomes), { targetIds: civId });
     [...civ.startingTechs, 'code-of-laws'].forEach(techId =>
-      this.world.createDisc(techId, { civIds: civId })
+      this.world.createDisc(techId, { targetIds: civId })
     );
     civ.startingBoons.forEach(boonId =>
-      this.world.createDisc(boonId, { civIds: civId })
+      this.world.createDisc(boonId, { targetIds: civId })
     );
     this.world.executeActions({
       actions: [
@@ -122,21 +121,29 @@ class Civs extends StateHandler {
       ],
       civId,
     });
-    return this.state.civList.find(civ => civ.id === civId);
+    return this._find('civList', civId);
   }
 
-  killCiv(civId, isShowMessage) {
-    const log = this.world.logEvent({ type: 'civDied', civId: civId });
-    if (isShowMessage) {
-      this.system.showMessage(log);
-    }
-    this._updateStateObj('civList', civId, { connect: [] });
+  killCiv(civId) {
+    const civ = this._find('civList', civId);
+    this.system.showMessage(this.world.logEvent({ type: 'civDied', civId }));
+    civ.connect.forEach(discId => {
+      const disc = this.world._find('discs', discId);
+      if (
+        !['biome', 'beast'].includes(disc.type) &&
+        !disc.isGlobal &&
+        !this.state.civList.find(
+          civFind => civFind.id !== civId && civFind.connect.includes(discId)
+        )
+      ) {
+        this.world.removeDisc(discId);
+      } else {
+        this.disconnectDisc(civId, discId);
+      }
+    });
     this.world.checkDiscRemove();
-    this.world.removeQueueItems({ civId });
-    this.clearIndex(
-      'civList',
-      this.state.civList.find(civ => civ.id === civId)?.index
-    );
+    this.world.removeQueueItems({ civId, skipActions: true });
+    this.clearIndex('civList', civ?.index);
     this._removeStateObj('civList', civId);
     if (this.state.civList.length === 0) {
       this.world.executeActions({ actions: [{ triggerEnding: 'extinction' }] });
@@ -152,8 +159,7 @@ class Civs extends StateHandler {
       );
 
       civ.connect.forEach(discId => {
-        const turnGrow = this.world.state.discs.find(disc => disc.id === discId)
-          ?.turnGrow;
+        const turnGrow = this.world._find('discs', discId)?.turnGrow;
         if (turnGrow && (!turnGrow.chance || Math.random() < turnGrow.chance)) {
           Object.keys(turnGrow).forEach(key => {
             if (typeof grow[key] === 'number') {
@@ -180,6 +186,10 @@ class Civs extends StateHandler {
       if (newFood < 0) {
         grow.food -= newFood / 5;
       }
+      grow.influence -=
+        (civ.influence + grow.influence) *
+        civ.influenceDecay *
+        (1 + (civ.influence + grow.influence) / 50);
 
       civ = this._updateStateObj('civList', civ.id, {
         ...this.state.civStats.reduce((obj, stat) => {
@@ -216,8 +226,8 @@ class Civs extends StateHandler {
   }
 
   connectDisc(civId, discId) {
-    const civ = this.state.civList.find(civ => civ.id === civId);
-    const disc = this.world.state.discs.find(disc => disc.id === discId);
+    const civ = this._find('civList', civId);
+    const disc = this.world._find('discs', discId);
     const boostProps = Object.keys(disc.boost || []).reduce((obj, key) => {
       let maxStat = this.state.civStats.find(stat => stat.maxName === key);
       return {
@@ -244,10 +254,10 @@ class Civs extends StateHandler {
   }
 
   disconnectDisc(civId, discId) {
-    const civ = this.state.civList.find(civ => civ.id === civId);
-    const disc = this.world.state.discs.find(disc => disc.id === discId);
+    const civ = this._find('civList', civId);
+    const disc = this.world._find('discs', discId);
     if (!civ || !disc) {
-      return console.log(
+      return console.warn(
         `disconnectDisc error - civId: ${civId}, discId: ${discId}.`
       );
     }
@@ -273,33 +283,11 @@ class Civs extends StateHandler {
   }
 
   damageCiv(civId, damageObj) {
-    const typeMatrix = {
-      earth: { strong: ['air'], weak: ['arcane'] },
-      fire: { strong: ['water'], weak: ['arcane'] },
-      water: { strong: ['fire'], weak: ['arcane'] },
-      air: { strong: ['earth'], weak: ['arcane'] },
-      nature: { strong: ['decay'], weak: ['arcane'] },
-      decay: { strong: ['nature'], weak: ['arcane'] },
-      chaos: { strong: ['order'] },
-      order: { strong: ['chaos'] },
-      arcane: {
-        strong: [
-          'air',
-          'earth',
-          'water',
-          'fire',
-          'nature',
-          'decay',
-          'chaos',
-          'order',
-        ],
-      },
-    };
-    const civ = this.state.civList.find(civ => civ.id === civId);
+    const civ = this._find('civList', civId);
     const protects = [];
     damageObj = { ...damageObj };
     civ.connect
-      .map(discId => this.world.state.discs.find(disc => disc.id === discId))
+      .map(discId => this.world._find('discs', discId))
       .forEach(item => {
         if (
           item.protect &&
@@ -316,7 +304,7 @@ class Civs extends StateHandler {
     });
     protects.push({
       mult: 1 / (0.15 * civ.magic + 1),
-      type: 'order',
+      type: 'arcane',
       validLabels: ['force'],
     });
 
@@ -331,19 +319,18 @@ class Civs extends StateHandler {
             protectObj.labels?.includes(label)
           ))
       ) {
+        let matrix = this.world.state.damageMatrix;
         let typeMult = 1;
-        if (typeMatrix[protectObj.type].strong?.includes(damageObj.type)) {
-          typeMult = 1.5;
-        } else if (typeMatrix[protectObj.type].weak?.includes(damageObj.type)) {
-          typeMult = 0.5;
-        } else if (protectObj.type !== damageObj.type) {
-          typeMult = 0.85;
+        if (matrix[protectObj.type].includes(damageObj.type)) {
+          typeMult = this.world.state.strongDamageMult;
+        } else if (matrix[damageObj.type].includes(protectObj.type)) {
+          typeMult = 1 / this.world.state.strongDamageMult;
         }
         if (protectObj.mult) {
-          damageObj.val *= protectObj.mult * (1 / typeMult);
+          damageObj.val *= Math.min(protectObj.mult * (1 / typeMult), 1);
         }
         if (protectObj.val && damageObj.val > 0) {
-          let damageVal = damageObj.val * (1 / typeMult);
+          let damageVal = damageObj.val;
           let protectVal = protectObj.val * typeMult;
           damageObj.val = Math.max(damageObj.val - protectVal, 0);
           this.world._updateStateObj('discs', protectObj.id, {
@@ -366,9 +353,9 @@ class Civs extends StateHandler {
 
   turnDamage(civId) {
     const damages = [];
-    let civ = this.state.civList.find(civ => civ.id === civId);
+    let civ = this._find('civList', civId);
     civ.connect
-      .map(discId => this.world.state.discs.find(disc => disc.id === discId))
+      .map(discId => this.world._find('discs', discId))
       .forEach(item => {
         if (
           item.turnDamage &&
@@ -379,7 +366,7 @@ class Civs extends StateHandler {
       });
 
     damages.forEach(damageObj => this.damageCiv(civ.id, damageObj));
-    return this.state.civList.find(civ => civ.id === civId);
+    return this._find('civList', civId);
   }
 }
 

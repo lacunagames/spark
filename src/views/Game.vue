@@ -34,6 +34,16 @@ export default {
       clickPos: { x: 200, y: 200 },
     };
   },
+  computed: {
+    ending() {
+      return this.$store.getters.world.ending;
+    },
+  },
+  watch: {
+    ending() {
+      ['world', 'spark', 'civs'].forEach(ref => this.$refs[ref].closeModal());
+    },
+  },
   methods: {
     hoverChanged(hovered) {
       clearTimeout(this.timer);

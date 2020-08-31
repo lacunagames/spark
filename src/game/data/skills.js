@@ -231,7 +231,7 @@ const skills = [
   {
     id: 'mana1',
     icon: 'mana',
-    effect: { maxMana: 3, manaPerTurn: 1 },
+    effect: { maxMana: 5, manaPerTurn: 2 },
     title: 'Max mana 1',
     desc: '',
     pos: calcPos(50, 50, 58, 42, 0),
@@ -241,7 +241,7 @@ const skills = [
   {
     id: 'mana2',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.05 },
+    effect: { manaRestoreMultiplier: 0.06 },
     title: 'Restore 2',
     desc: '',
     pos: calcPos(50, 50, 58, 42, 90),
@@ -251,7 +251,7 @@ const skills = [
   {
     id: 'mana3',
     icon: 'mana',
-    effect: { maxMana: 3, manaPerTurn: 1 },
+    effect: { maxMana: 5, manaPerTurn: 2 },
     title: 'Max mana 3',
     desc: '',
     pos: calcPos(50, 50, 58, 42, 180),
@@ -261,7 +261,7 @@ const skills = [
   {
     id: 'mana4',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.05 },
+    effect: { manaRestoreMultiplier: 0.06 },
     title: 'Restore 4',
     desc: '',
     pos: calcPos(50, 50, 58, 42, 270),
@@ -271,7 +271,7 @@ const skills = [
   {
     id: 'mana5',
     icon: 'mana',
-    effect: { maxMana: 3, manaPerTurn: 1 },
+    effect: { maxMana: 5, manaPerTurn: 2 },
     title: 'Max mana 5',
     desc: '',
     pos: calcPos(50, 50, 50, 32, 0),
@@ -299,7 +299,7 @@ const skills = [
   {
     id: 'mana8',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.1 },
+    effect: { manaRestoreMultiplier: 0.12 },
     title: 'Restore XL 8',
     desc: '',
     pos: calcPos(50, 50, 45, 8, 0),
@@ -308,7 +308,7 @@ const skills = [
   {
     id: 'mana9',
     icon: 'mana',
-    effect: { maxMana: 5, manaPerTurn: 2 },
+    effect: { maxMana: 10, manaPerTurn: 4 },
     title: 'Max mana XL 9',
     desc: '',
     pos: calcPos(50, 50, 55, 8, 0),
@@ -317,7 +317,7 @@ const skills = [
   {
     id: 'mana10',
     icon: 'mana',
-    effect: { maxMana: 3, manaPerTurn: 1 },
+    effect: { maxMana: 5, manaPerTurn: 2 },
     title: 'Max mana 10',
     desc: '',
     pos: calcPos(50, 50, 50, 32, 90),
@@ -345,7 +345,7 @@ const skills = [
   {
     id: 'mana13',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.1 },
+    effect: { manaRestoreMultiplier: 0.12 },
     title: 'Restore XL 13',
     desc: '',
     pos: calcPos(50, 50, 45, 8, 90),
@@ -354,7 +354,7 @@ const skills = [
   {
     id: 'mana14',
     icon: 'mana',
-    effect: { maxMana: 5, manaPerTurn: 2 },
+    effect: { maxMana: 10, manaPerTurn: 4 },
     title: 'Max mana XL 14',
     desc: '',
     pos: calcPos(50, 50, 55, 8, 90),
@@ -363,7 +363,7 @@ const skills = [
   {
     id: 'mana15',
     icon: 'mana',
-    effect: { maxMana: 3, manaPerTurn: 1 },
+    effect: { maxMana: 5, manaPerTurn: 2 },
     title: 'Max mana 15',
     desc: '',
     pos: calcPos(50, 50, 50, 32, 180),
@@ -391,7 +391,7 @@ const skills = [
   {
     id: 'mana18',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.1 },
+    effect: { manaRestoreMultiplier: 0.12 },
     title: 'Restore XL 18',
     desc: '',
     pos: calcPos(50, 50, 45, 8, 180),
@@ -400,7 +400,7 @@ const skills = [
   {
     id: 'mana19',
     icon: 'mana',
-    effect: { maxMana: 5, manaPerTurn: 2 },
+    effect: { maxMana: 10, manaPerTurn: 4 },
     title: 'Max mana XL 19',
     desc: '',
     pos: calcPos(50, 50, 55, 8, 180),
@@ -409,7 +409,7 @@ const skills = [
   {
     id: 'mana20',
     icon: 'mana',
-    effect: { maxMana: 3, manaPerTurn: 1 },
+    effect: { maxMana: 5, manaPerTurn: 2 },
     title: 'Max mana 20',
     desc: '',
     pos: calcPos(50, 50, 50, 32, 270),
@@ -437,7 +437,7 @@ const skills = [
   {
     id: 'mana23',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.1 },
+    effect: { manaRestoreMultiplier: 0.12 },
     title: 'Restore XL 23',
     desc: '',
     pos: calcPos(50, 50, 45, 8, 270),
@@ -446,7 +446,7 @@ const skills = [
   {
     id: 'mana24',
     icon: 'mana',
-    effect: { maxMana: 5, manaPerTurn: 2 },
+    effect: { maxMana: 10, manaPerTurn: 4 },
     title: 'Max mana XL 24',
     desc: '',
     pos: calcPos(50, 50, 55, 8, 270),
@@ -455,7 +455,7 @@ const skills = [
   {
     id: 'mana25',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.05 },
+    effect: { manaRestoreMultiplier: 0.06 },
     title: 'Restore 25',
     desc: '',
     pos: calcPos(50, 50, 46, 30, 28, 1.2),
@@ -473,7 +473,7 @@ const skills = [
   {
     id: 'mana27',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.1 },
+    effect: { manaRestoreMultiplier: 0.12 },
     title: 'Restore XL 27',
     desc: '',
     pos: calcPos(50, 50, 45, 8, 28, 1),
@@ -482,7 +482,7 @@ const skills = [
   {
     id: 'mana28',
     icon: 'mana',
-    effect: { maxMana: 5, manaPerTurn: 2 },
+    effect: { maxMana: 10, manaPerTurn: 4 },
     title: 'Max mana XL 28',
     desc: '',
     pos: calcPos(50, 50, 55, 8, 28, 1),
@@ -491,7 +491,7 @@ const skills = [
   {
     id: 'mana29',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.05 },
+    effect: { manaRestoreMultiplier: 0.06 },
     title: 'Restore 29',
     desc: '',
     pos: calcPos(50, 50, 50, 32, 55, 1.2),
@@ -509,7 +509,7 @@ const skills = [
   {
     id: 'mana31',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.1 },
+    effect: { manaRestoreMultiplier: 0.12 },
     title: 'Restore XL 31',
     desc: '',
     pos: calcPos(50, 50, 45, 16, 55, 1.2),
@@ -518,7 +518,7 @@ const skills = [
   {
     id: 'mana32',
     icon: 'mana',
-    effect: { maxMana: 5, manaPerTurn: 2 },
+    effect: { maxMana: 10, manaPerTurn: 4 },
     title: 'Max mana XL 32',
     desc: '',
     pos: calcPos(50, 50, 55, 16, 55, 1.2),
@@ -527,7 +527,7 @@ const skills = [
   {
     id: 'mana33',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.05 },
+    effect: { manaRestoreMultiplier: 0.06 },
     title: 'Restore 33',
     desc: '',
     pos: calcPos(50, 50, 46, 30, 118, 1.2),
@@ -545,7 +545,7 @@ const skills = [
   {
     id: 'mana35',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.1 },
+    effect: { manaRestoreMultiplier: 0.12 },
     title: 'Restore XL 35',
     desc: '',
     pos: calcPos(50, 50, 45, 8, 118, 1),
@@ -554,7 +554,7 @@ const skills = [
   {
     id: 'mana36',
     icon: 'mana',
-    effect: { maxMana: 5, manaPerTurn: 2 },
+    effect: { maxMana: 10, manaPerTurn: 4 },
     title: 'Max mana XL 36',
     desc: '',
     pos: calcPos(50, 50, 55, 8, 118, 1),
@@ -563,7 +563,7 @@ const skills = [
   {
     id: 'mana37',
     icon: 'mana',
-    effect: { maxMana: 3, manaPerTurn: 1 },
+    effect: { maxMana: 5, manaPerTurn: 2 },
     title: 'Max mana 37',
     desc: '',
     pos: calcPos(50, 50, 50, 32, 145, 1.2),
@@ -581,7 +581,7 @@ const skills = [
   {
     id: 'mana39',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.1 },
+    effect: { manaRestoreMultiplier: 0.12 },
     title: 'Restore XL 39',
     desc: '',
     pos: calcPos(50, 50, 45, 16, 145, 1.2),
@@ -590,7 +590,7 @@ const skills = [
   {
     id: 'mana40',
     icon: 'mana',
-    effect: { maxMana: 5, manaPerTurn: 2 },
+    effect: { maxMana: 10, manaPerTurn: 4 },
     title: 'Max mana XL 40',
     desc: '',
     pos: calcPos(50, 50, 55, 16, 145, 1.2),
@@ -599,7 +599,7 @@ const skills = [
   {
     id: 'mana41',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.05 },
+    effect: { manaRestoreMultiplier: 0.06 },
     title: 'Restore 41',
     desc: '',
     pos: calcPos(50, 50, 46, 30, 208, 1.2),
@@ -617,7 +617,7 @@ const skills = [
   {
     id: 'mana43',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.1 },
+    effect: { manaRestoreMultiplier: 0.12 },
     title: 'Restore XL 43',
     desc: '',
     pos: calcPos(50, 50, 45, 8, 208, 1),
@@ -626,7 +626,7 @@ const skills = [
   {
     id: 'mana44',
     icon: 'mana',
-    effect: { maxMana: 5, manaPerTurn: 2 },
+    effect: { maxMana: 10, manaPerTurn: 4 },
     title: 'Max mana XL 44',
     desc: '',
     pos: calcPos(50, 50, 55, 8, 208, 1),
@@ -635,7 +635,7 @@ const skills = [
   {
     id: 'mana45',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.05 },
+    effect: { manaRestoreMultiplier: 0.06 },
     title: 'Restore 45',
     desc: '',
     pos: calcPos(50, 50, 50, 32, 235, 1.2),
@@ -653,7 +653,7 @@ const skills = [
   {
     id: 'mana47',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.1 },
+    effect: { manaRestoreMultiplier: 0.12 },
     title: 'Restore XL 47',
     desc: '',
     pos: calcPos(50, 50, 45, 16, 235, 1.2),
@@ -662,7 +662,7 @@ const skills = [
   {
     id: 'mana48',
     icon: 'mana',
-    effect: { maxMana: 5, manaPerTurn: 2 },
+    effect: { maxMana: 10, manaPerTurn: 4 },
     title: 'Max mana XL 48',
     desc: '',
     pos: calcPos(50, 50, 55, 16, 235, 1.2),
@@ -671,7 +671,7 @@ const skills = [
   {
     id: 'mana49',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.05 },
+    effect: { manaRestoreMultiplier: 0.06 },
     title: 'Restore 49',
     desc: '',
     pos: calcPos(50, 50, 46, 30, 298, 1.2),
@@ -689,7 +689,7 @@ const skills = [
   {
     id: 'mana51',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.1 },
+    effect: { manaRestoreMultiplier: 0.12 },
     title: 'Restore XL 51',
     desc: '',
     pos: calcPos(50, 50, 45, 8, 298, 1),
@@ -698,7 +698,7 @@ const skills = [
   {
     id: 'mana52',
     icon: 'mana',
-    effect: { maxMana: 5, manaPerTurn: 2 },
+    effect: { maxMana: 10, manaPerTurn: 4 },
     title: 'Max mana XL 52',
     desc: '',
     pos: calcPos(50, 50, 55, 8, 298, 1),
@@ -707,7 +707,7 @@ const skills = [
   {
     id: 'mana53',
     icon: 'mana',
-    effect: { maxMana: 3, manaPerTurn: 1 },
+    effect: { maxMana: 5, manaPerTurn: 2 },
     title: 'Max mana 53',
     desc: '',
     pos: calcPos(50, 50, 50, 32, 325, 1.2),
@@ -725,7 +725,7 @@ const skills = [
   {
     id: 'mana55',
     icon: 'mana-restore',
-    effect: { manaRestoreMultiplier: 0.1 },
+    effect: { manaRestoreMultiplier: 0.12 },
     title: 'Restore XL 55',
     desc: '',
     pos: calcPos(50, 50, 45, 16, 325, 1.2),
@@ -734,7 +734,7 @@ const skills = [
   {
     id: 'mana56',
     icon: 'mana',
-    effect: { maxMana: 5, manaPerTurn: 2 },
+    effect: { maxMana: 10, manaPerTurn: 4 },
     title: 'Max mana XL 56',
     desc: '',
     pos: calcPos(50, 50, 55, 16, 325, 1.2),

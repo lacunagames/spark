@@ -93,6 +93,7 @@ export default {
             disc => disc.id === spell.id
           );
           return (
+            !['knowledge'].includes(spell.type) &&
             spell.category &&
             (this.selectedSpellTab === 'all-spells' ||
               spell.category === this.selectedSpellTab) &&
@@ -104,7 +105,7 @@ export default {
               isActive) &&
             (((!spell.upgrades || isActive) &&
               !this.gameAction('getDiscUpgrade', spell.id)) ||
-              ['knowledge', 'boon', 'spell'].includes(spell.type))
+              ['boon', 'spell'].includes(spell.type))
           );
         })
         .map(spell => ({

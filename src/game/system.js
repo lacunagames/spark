@@ -4,6 +4,7 @@ const defaultState = {
   messages: [],
   errorMessage: undefined,
   muteMessages: true,
+  isSparkTurn: false,
   floaters: [],
   clickPos: { x: 100, y: 100 },
 };
@@ -32,6 +33,14 @@ const messageTypes = {
   notEnoughMana: {
     type: 'error',
     msg: () => `Not enough mana.`,
+  },
+  notEnoughManaCharge: {
+    type: 'error',
+    msg: () => `Not enough mana charges.`,
+  },
+  notEnoughInfluence: {
+    type: 'error',
+    msg: () => `Not enough influence.`,
   },
   noRaceSelected: {
     type: 'error',

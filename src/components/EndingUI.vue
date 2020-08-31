@@ -1,13 +1,13 @@
 <template>
-  <transition name="ending-fade" :duration="500" v-if="ending">
+  <transition name="ending-fade" :duration="500" v-if="ending.text">
     <div class="ending-screen">
       <div class="modal">
         <img
-          :src="getImgUrl('ending-' + ending + '.png')"
+          :src="getImgUrl('ending-' + ending.img + '.png')"
           width="250"
           height="250"
         />
-        <h3>The world has ended by {{ ending }}.</h3>
+        <h3>The world has ended by {{ ending.text }}.</h3>
         <button class="primary" @click="$router.go()">Restart game</button>
       </div>
     </div>
@@ -19,7 +19,15 @@ export default {
   name: 'EndingUI',
   computed: {
     ending() {
-      return this.$store.getters.world.ending;
+      const worldEnding = this.$store.getters.world.ending;
+      const endings = {
+        civTransformEarth: {
+          img: 'civ-transform-earth',
+          text:
+            'gaining absolute control over a civilization with Stone children transform.',
+        },
+      };
+      return endings[worldEnding] || { img: worldEnding, text: worldEnding };
     },
   },
   methods: {

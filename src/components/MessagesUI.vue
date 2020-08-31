@@ -35,8 +35,16 @@
                 @click="clickLogButton(btn, log)"
               >
                 <span class="mana">
-                  <span class="mana-circle-before"></span>
-                  {{ btn.mana }}
+                  <span
+                    class="mana-circle-before"
+                    :class="{ 'pre-charge': btn.manaCost.charge }"
+                  ></span>
+                  {{ btn.manaCost.mana }}
+                  <span
+                    class="mana-charge-circle-before"
+                    v-if="btn.manaCost.charge"
+                  ></span>
+                  {{ btn.manaCost.charge || '' }}
                 </span>
                 {{ btn.title }}
               </button>
@@ -211,7 +219,7 @@ export default {
   }
   .mana-charge-circle-before:before {
     left: -5px;
-    top: 0;
+    top: 5px;
   }
   .influence-circle-before:before {
     left: -5px;
@@ -298,6 +306,10 @@ export default {
       margin: 0 0 0 10px;
       font-size: 16px;
       height: 23px;
+    }
+
+    .mana-charge-circle-before {
+      padding-left: 5px;
     }
   }
   .completed {

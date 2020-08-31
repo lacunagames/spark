@@ -2,7 +2,9 @@
   <div class="spark">
     <div>
       <div class="turn-button">
-        Turn {{ world.turn }}
+        <span @click.prevent="gameAction('cheatSpark')"
+          >Turn {{ world.turn }}</span
+        >
         <br />
         <button class="primary" @click="gameAction('nextTurn', 2)">
           Next turn
@@ -88,6 +90,10 @@ export default {
     openModal(type) {
       if (type === 'skills') this.isNewLevelUp = false;
       this.$refs[`${type}Modal`].openModal();
+    },
+    closeModal() {
+      this.$refs.spellsModal.closeModal();
+      this.$refs.skillsModal.closeModal();
     },
   },
 };
@@ -196,7 +202,7 @@ export default {
         background-color: #35ced5;
         border: 2px solid #0463a7;
         transform: rotate(45deg);
-        border-radius: 8px;
+        border-radius: 6px;
         position: absolute;
         top: -85px;
         left: 15px;

@@ -1,7 +1,7 @@
 <template>
   <transition name="modal-fade" :duration="500">
-    <div class="modal-wrap">
-      <div class="modal-backdrop" @click.self="close"></div>
+    <div class="modal-wrap" @click.self="close">
+      <div class="modal-backdrop"></div>
       <div class="modal" :class="classes" @keydown.esc="close">
         <header class="modal-header">
           <slot name="header">
@@ -70,7 +70,7 @@ export default {
 .modal-fade-leave-active {
   .modal-backdrop,
   .modal {
-    transition: opacity 500ms ease;
+    transition: opacity 300ms ease;
   }
   .side-panel {
     transition: transform 500ms ease;
@@ -80,33 +80,33 @@ export default {
 .modal-wrap {
   position: fixed;
   top: 0;
-  bottom: 0;
   left: 0;
-  right: 0;
   z-index: 1;
-  display: grid;
-  align-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: 100%;
+  height: 100%;
 }
-
 .modal-backdrop {
-  cursor: pointer;
-  position: absolute;
-  top: 0;
-  bottom: 0;
+  position: fixed;
   left: 0;
+  top: 0;
   right: 0;
-  background-color: rgba(0, 0, 0, 0.3);
+  bottom: 0;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .modal {
-  position: absolute;
-  margin: 20px auto;
+  margin: 40px;
   background: #eee8c5;
   border-radius: 1px;
   box-shadow: 2px 2px 20px 1px;
-  overflow-x: auto;
   position: relative;
-  width: 500px;
+  width: 540px;
   z-index: 2;
 
   .modal-header,
@@ -155,6 +155,7 @@ export default {
 .side-panel {
   width: 850px;
   height: 100%;
+  max-height: 100%;
   margin: 0 0 0 auto;
   border-radius: 1px 0 0 1px;
 

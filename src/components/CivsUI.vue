@@ -136,8 +136,13 @@
                       @click="gameAction('modifyDisc', item.id, selectedCiv.id)"
                     >
                       <span class="mana mana-circle-before">{{
-                        item.removeCost
+                        item.removeCost.mana
                       }}</span>
+                      <span
+                        class="mana mana-charge-circle-before"
+                        v-if="item.removeCost.charge"
+                        >{{ item.removeCost.charge }}</span
+                      >
                       ✕
                     </button>
                     <h4>{{ item.title }}</h4>
@@ -230,9 +235,11 @@ export default {
             civ.connect.includes(disc.id)
         )
         .map(disc => {
-          const hasRemove = !!this.$store.getters.spark.skills.find(
-            skill => skill.isActive && skill.id === disc.skill
-          );
+          const hasRemove =
+            !disc.removeDisabled &&
+            !!this.$store.getters.spark.skills.find(
+              skill => skill.isActive && skill.id === disc.skill
+            );
           return {
             ...disc,
             civDuration: disc.durations?.[this.selectedCiv.id],
@@ -278,8 +285,7 @@ export default {
             y2: world.positions[disc.index].top,
             isModify: false,
             isPositive: disc.type === 'biome',
-            isNegative:
-              disc.labels?.includes('force') || disc.labels?.includes('beast'),
+            isNegative: ['beast', 'force'].includes(disc.type),
             isVisible: [civ.id, disc.id].includes(this.hovered),
             id: `${discId}-${civ.id}`,
           });
@@ -287,27 +293,38 @@ export default {
       });
       world.discs.forEach(disc => {
         if (['knowledge', 'boon'].includes(disc.type)) return;
-
-        disc.connects?.forEach(conn => {
-          const otherDisc = world.discs.find(disc => disc.id === conn.discId);
+        const createConn = (conn, connType, unsafe) => {
+          const otherDisc = world.discs.find(
+            disc => disc.id === conn || (unsafe && disc.labels?.includes(conn))
+          );
 
           if (
             !otherDisc ||
             connections.find(conn => conn.id === `${disc.id}-${otherDisc.id}`)
-          )
+          ) {
             return;
+          }
+          connType =
+            connType ??
+            world.connectionTypes[`${disc.id}|${otherDisc.id}`] ??
+            world.connectionTypes[`${otherDisc.id}|${disc.id}`];
           connections.push({
             x1: world.positions[otherDisc.index].left,
             y1: world.positions[otherDisc.index].top,
             x2: world.positions[disc.index].left,
             y2: world.positions[disc.index].top,
             isModify: true,
-            isPositive: conn.isPositive,
-            isNegative: conn.isNegative,
+            isPositive: connType === true,
+            isNegative: connType === false,
             isVisible: [otherDisc.id, disc.id].includes(this.hovered),
             id: `${disc.id}-${otherDisc.id}`,
           });
-        });
+        };
+
+        disc.connect?.forEach(conn => createConn(conn));
+        disc.alwaysConnect?.forEach(obj =>
+          createConn(obj.disc, obj.isPositive, true)
+        );
       });
       return connections;
     },
@@ -631,7 +648,7 @@ export default {
       float: right;
       background: $cError;
       border-radius: 100px;
-      padding: 4px 10px 4px 25px;
+      padding: 4px 10px 4px 0;
       color: #fff;
       font-size: 14px;
       line-height: 16px;
@@ -641,12 +658,16 @@ export default {
       .mana {
         font-size: 18px;
         border-right: 1px solid lighten($cError, 10%);
-        padding-right: 5px;
+        padding: 0 5px 0 27px;
         margin-right: 3px;
+        position: relative;
         &:before {
           position: absolute;
-          left: 3px;
-          top: 3px;
+          left: 4px;
+          top: 4px;
+        }
+        &.mana-charge-circle-before:before {
+          top: 11px;
         }
       }
 

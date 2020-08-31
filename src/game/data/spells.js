@@ -11,7 +11,7 @@ const spells = [
   },
   {
     id: 'arcane-attunement',
-    title: 'Arcane attunement',
+    title: 'Arcane Attunement',
     skill: 'arcane',
     category: 'arcane',
     mana: 10,
@@ -29,19 +29,18 @@ const spells = [
     mana: 5,
     desc: 'Bla bla somethingg',
     type: 'spell',
-
     onCast: [
       {
         addStat: { wealth: 3, tech: 3, warlust: 3 },
         createLog: 'statGain',
         skipMessage: true,
       },
-      { addStat: { influence: 3 }, showFloater: 'influence' },
+      { addStat: { influence: 3 }, showFloater: 'influence', sparkOnly: true },
     ],
   },
   {
     id: 'lightning-strike',
-    title: 'Lightning strike',
+    title: 'Lightning Strike',
     skill: 'air',
     category: 'air',
     mana: 10,
@@ -50,15 +49,32 @@ const spells = [
     skipLog: true,
     onCast: [
       {
-        damageCiv: { type: 'air', val: 20 },
-        createLog: 'damageCiv',
+        damageAny: { type: 'air', val: 20 },
+        createLog: 'damageAny',
+      },
+    ],
+    labels: ['force'],
+  },
+  {
+    id: 'falling-boulders',
+    title: 'Falling Boulders',
+    skill: 'earth',
+    category: 'earth',
+    mana: 10,
+    desc: 'Bla bla something',
+    type: 'spell',
+    skipLog: true,
+    onCast: [
+      {
+        damageAny: { type: 'earth', val: 10 },
+        createLog: 'damageAny',
       },
     ],
     labels: ['force'],
   },
   {
     id: 'chaos-explosion',
-    title: 'Chaos explosion',
+    title: 'Chaos Explosion',
     skill: 'chaos',
     category: 'chaos',
     mana: 20,
@@ -70,19 +86,41 @@ const spells = [
         damageCiv: { type: 'chaos', val: 35 },
         createLog: 'damageCiv',
       },
+      {
+        removeStat: { influence: 8 },
+        noSparkOnly: true,
+      },
     ],
     labels: ['force'],
   },
   {
     id: 'destroy-biome',
-    title: 'Destroy biome',
-    skill: 'earth',
-    category: 'earth',
-    mana: 1,
+    title: 'Destroy Biome',
+    skill: 'chaos',
+    category: 'chaos',
+    mana: 30,
     desc: 'Destroys a random biome.',
     type: 'spell',
     skipLog: true,
     onCast: [{ destroyRandomDiscByType: 'biome' }],
+  },
+  {
+    id: 'magnetizing-will',
+    title: 'Magnetizing Will',
+    skill: 'earth',
+    category: 'earth',
+    mana: 0,
+    desc: 'Generates 6 mana instantly but locks regeneration for 6 mana.',
+    type: 'spell',
+    skipLog: true,
+    rechargeTurns: 6,
+    onCast: [
+      {
+        sparkStat: { mana: 6, manaLock: 6 },
+        canOverflow: true,
+        createLog: 'sparkStat',
+      },
+    ],
   },
 ];
 

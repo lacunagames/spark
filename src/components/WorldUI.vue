@@ -26,11 +26,29 @@
       >
         <a
           href="#"
-          :class="{ [`icon-${disc.id}`]: true, large: disc.villain }"
+          :class="{
+            large: disc.villain || disc.type === 'biome',
+          }"
           :title="disc.title"
           v-on="hoverHandle(disc.id)"
           @click.prevent="openModal(disc)"
         >
+          <span
+            :class="{
+              background: true,
+              icon: true,
+              [`icon-${disc.id}`]: true,
+            }"
+          >
+            <span
+              :class="`health icon icon-${disc.id}`"
+              v-if="disc.health"
+              :style="{
+                height: disc.healthMissing + '%',
+              }"
+            >
+            </span>
+          </span>
           <CircleMeter
             v-if="disc.isGlobal && disc.duration"
             :size="50"
@@ -55,6 +73,7 @@
 </template>
 
 <script>
+import utils from '@/game/utils';
 import Modal from '@/components/Modal';
 import SpellDetails from '@/components/SpellDetails';
 import CircleMeter from '@/components/CircleMeter';
@@ -88,9 +107,17 @@ export default {
       return this.$store.getters.world;
     },
     realDiscs() {
-      return this.$store.getters.world.discs.filter(
-        disc => !['knowledge', 'boon'].includes(disc.type)
-      );
+      return this.$store.getters.world.discs
+        .filter(disc => !['knowledge', 'boon'].includes(disc.type))
+        .map(disc => ({
+          ...disc,
+          healthMissing: utils.round(
+            100 -
+              ((this.$store.getters.world.healths[disc.id] ?? disc.health) /
+                disc.health) *
+                100
+          ),
+        }));
     },
   },
   methods: {
@@ -146,6 +173,26 @@ export default {
       left: -25px;
       top: -25px;
       transition: box-shadow $animFast;
+
+      .background {
+        overflow: hidden;
+        border-radius: 30px;
+        display: inline-block;
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+
+      .health {
+        filter: grayscale(1);
+        box-shadow: 2px 2px 6px #eae4c1;
+        transition: height 0.2s ease-out;
+        display: inline-block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+      }
 
       &:hover {
         box-shadow: 0 0 2px 4px #ffffd241, $shadow3;

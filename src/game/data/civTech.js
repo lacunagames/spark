@@ -65,7 +65,7 @@ export default [
   },
   {
     id: 'bronze-working',
-    title: 'Bronze working',
+    title: 'Bronze Working',
     requires: ['mining'],
     skill: 'earth',
     category: 'earth',
@@ -88,7 +88,7 @@ export default [
   },
   {
     id: 'iron-working',
-    title: 'Iron working',
+    title: 'Iron Working',
     requires: ['smelting'],
     skill: 'earth',
     category: 'earth',
@@ -100,7 +100,7 @@ export default [
   },
   {
     id: 'metal-casting',
-    title: 'Metal casting',
+    title: 'Metal Casting',
     requires: ['iron-working'],
     skill: 'earth',
     category: 'earth',
@@ -111,7 +111,7 @@ export default [
   },
   {
     id: 'mithril-working',
-    title: 'Mithril working',
+    title: 'Mithril Working',
     requires: ['metal-casting'],
     skill: 'earth',
     category: 'earth',
@@ -123,7 +123,7 @@ export default [
   },
   {
     id: 'cave-dwellers',
-    title: 'Cave dwellers',
+    title: 'Cave Dwellers',
     boost: { maxPop: 20 },
     requires: ['racial'],
     skill: 'earth',
@@ -135,7 +135,7 @@ export default [
   },
   {
     id: 'underground-housing',
-    title: 'Underground housing',
+    title: 'Underground Housing',
     boost: { maxPop: 20 },
     requires: ['cave-dwellers'],
     skill: 'earth',
@@ -147,7 +147,7 @@ export default [
   },
   {
     id: 'great-caverns',
-    title: 'Great caverns',
+    title: 'Great Caverns',
     boost: { maxPop: 40 },
     requires: ['underground-housing'],
     skill: 'earth',
@@ -159,7 +159,7 @@ export default [
   },
   {
     id: 'hearth-of-the-mountain',
-    title: 'Hearth of the mountain',
+    title: 'Hearth of the Mountain',
     boost: { maxPop: 100 },
     requires: ['great-caverns'],
     skill: 'earth',
@@ -171,7 +171,7 @@ export default [
   },
   {
     id: 'earth-chants',
-    title: 'Earth chants',
+    title: 'Earth Chants',
     requires: ['digging'],
     skill: 'earth',
     category: 'earth',
@@ -183,7 +183,7 @@ export default [
   },
   {
     id: 'earth-magic',
-    title: 'Earth magic',
+    title: 'Earth Magic',
     requires: ['earth-chants'],
     skill: 'earth',
     category: 'earth',
@@ -195,7 +195,7 @@ export default [
   },
   {
     id: 'golem-creation',
-    title: 'Golem creation',
+    title: 'Golem Creation',
     requires: ['earth-magic'],
     skill: 'earth',
     category: 'earth',
@@ -206,7 +206,7 @@ export default [
   },
   {
     id: 'master-earth-adept',
-    title: 'Master earth adept',
+    title: 'Master Earth Adept',
     requires: ['earth-magic'],
     skill: 'earth',
     category: 'earth',
@@ -218,7 +218,7 @@ export default [
   },
   {
     id: 'crystal-extraction',
-    title: 'Crystal extraction',
+    title: 'Crystal Extraction',
     requires: ['mining'],
     skill: 'earth',
     category: 'earth',
@@ -240,7 +240,7 @@ export default [
   },
   {
     id: 'crystal-magic',
-    title: 'Crystal magic',
+    title: 'Crystal Magic',
     requires: ['gemology'],
     skill: 'earth',
     category: 'earth',
@@ -296,7 +296,7 @@ export default [
   },
   {
     id: 'science-council',
-    title: 'Science council',
+    title: 'Science Council',
     requires: ['machinery'],
     skill: 'knowledge',
     category: 'knowledge',
@@ -385,7 +385,7 @@ export default [
   },
   {
     id: 'religious-law',
-    title: 'Religious law',
+    title: 'Religious Law',
     requires: ['priesthood'],
     skill: 'order',
     category: 'order',
@@ -396,7 +396,7 @@ export default [
   },
   {
     id: 'religious-leadership',
-    title: 'Religious leadership',
+    title: 'Religious Leadership',
     requires: ['religious-law'],
     skill: 'order',
     category: 'order',
@@ -419,7 +419,7 @@ export default [
   },
   {
     id: 'royal-code',
-    title: 'Royal code',
+    title: 'Royal Code',
     requires: ['constitution'],
     skill: 'order',
     category: 'order',
@@ -535,7 +535,7 @@ export default [
   },
   {
     id: 'blasting-powder',
-    title: 'Blasting powder',
+    title: 'Blasting Powder',
     requires: ['alchemy'],
     skill: 'knowledge',
     category: 'knowledge',
@@ -547,7 +547,7 @@ export default [
   },
   {
     id: 'gold-creation',
-    title: 'Gold creation',
+    title: 'Gold Creation',
     requires: ['blasting-powder'],
     skill: 'knowledge',
     category: 'knowledge',
@@ -559,7 +559,7 @@ export default [
   },
   {
     id: 'philosophers-stone',
-    title: `Philosopher's stone`,
+    title: `Philosopher's Stone`,
     requires: ['gold-creation'],
     skill: 'knowledge',
     category: 'knowledge',
@@ -584,7 +584,7 @@ export default [
   },
   {
     id: 'military-strategy',
-    title: 'Military strategy',
+    title: 'Military Strategy',
     requires: ['warfare'],
     upgrades: ['pillage'],
     skill: 'chaos',
@@ -597,7 +597,7 @@ export default [
   },
   {
     id: 'combat-training',
-    title: 'Combat training',
+    title: 'Combat Training',
     requires: ['military-strategy'],
     skill: 'chaos',
     category: 'chaos',
@@ -608,7 +608,7 @@ export default [
   },
   {
     id: 'siege-tactics',
-    title: 'Siege tactics',
+    title: 'Siege Tactics',
     requires: ['combat-training'],
     skill: 'chaos',
     category: 'chaos',
@@ -698,7 +698,7 @@ export default [
   },
   {
     id: 'adventuring-spirit',
-    title: 'Adventuring spirit',
+    title: 'Adventuring Spirit',
     requires: ['exploration'],
     upgrades: ['roaming-patrol'],
     skill: 'air',
@@ -710,7 +710,7 @@ export default [
   },
   {
     id: 'questing-group',
-    title: 'Questing group',
+    title: 'Questing Group',
     requires: ['adventuring-spirit'],
     skill: 'air',
     category: 'air',

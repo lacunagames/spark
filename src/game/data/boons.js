@@ -105,7 +105,7 @@ export default [
   // Affinities
   {
     id: 'nature',
-    title: 'Nature affinity',
+    title: 'Nature Affinity',
     desc: 'Receives bonuses for Nature effects.',
     skill: 'life',
     category: 'nature',
@@ -114,7 +114,7 @@ export default [
   },
   {
     id: 'peace',
-    title: 'Peace affinity',
+    title: 'Peace Affinity',
     desc: 'Receives bonuses for Peace effects.',
     skill: 'peace',
     category: 'order',
@@ -123,16 +123,17 @@ export default [
   },
   {
     id: 'earth',
-    title: 'Earth affinity',
+    title: 'Earth Affinity',
     desc: 'Receives bonuses for Earth effects.',
     skill: 'earth2',
     category: 'earth',
     mana: 12,
+    influence: 30,
     type: 'boon',
   },
   {
     id: 'science',
-    title: 'Science affinity',
+    title: 'Science Affinity',
     desc: 'Receives bonuses for Science effects.',
     skill: 'science',
     category: 'knowledge',
@@ -141,7 +142,7 @@ export default [
   },
   {
     id: 'art',
-    title: 'Art affinity',
+    title: 'Art Affinity',
     desc: 'Receives bonuses for Art effects.',
     skill: 'art',
     category: 'harmony',
@@ -150,7 +151,7 @@ export default [
   },
   {
     id: 'war',
-    title: 'War affinity',
+    title: 'War Affinity',
     desc: 'Receives bonuses for War effects.',
     skill: 'war',
     category: 'chaos',
@@ -161,7 +162,7 @@ export default [
   // Shields
   {
     id: 'earth-shield',
-    title: 'Earth shield',
+    title: 'Earth Shield',
     desc:
       'Protects a civilization from harmful effects. Most effective against air.',
     skill: 'earth',
@@ -169,11 +170,14 @@ export default [
     mana: 8,
     type: 'boon',
     duration: 11,
-    protect: { mult: 0.5, type: 'earth' },
+    protect: { mult: 0.6, type: 'earth' },
+    onConnect: [
+      { addStat: { influence: 1 }, showFloater: 'influence', sparkOnly: true },
+    ],
   },
   {
     id: 'water-shield',
-    title: 'Water shield',
+    title: 'Water Shield',
     desc:
       'Protects a civilization from harmful effects. Most effective against fire.',
     skill: 'water',
@@ -181,11 +185,14 @@ export default [
     mana: 8,
     type: 'boon',
     duration: 9,
-    protect: { mult: 0.5, type: 'water' },
+    protect: { mult: 0.6, type: 'water' },
+    onConnect: [
+      { addStat: { influence: 1 }, showFloater: 'influence', sparkOnly: true },
+    ],
   },
   {
     id: 'force-shield',
-    title: 'Force shield',
+    title: 'Force Shield',
     desc:
       'Protects a civilization from harmful effects. Most effective against earth.',
     skill: 'air',
@@ -193,11 +200,14 @@ export default [
     mana: 8,
     type: 'boon',
     duration: 9,
-    protect: { mult: 0.5, type: 'air' },
+    protect: { mult: 0.6, type: 'air' },
+    onConnect: [
+      { addStat: { influence: 1 }, showFloater: 'influence', sparkOnly: true },
+    ],
   },
   {
     id: 'fire-wall',
-    title: 'Fire wall',
+    title: 'Fire Wall',
     desc:
       'Protects a civilization from harmful effects. Most effective against water.',
     skill: 'fire',
@@ -205,7 +215,10 @@ export default [
     mana: 7,
     type: 'boon',
     duration: 7,
-    protect: { mult: 0.5, type: 'fire' },
+    protect: { mult: 0.6, type: 'fire' },
+    onConnect: [
+      { addStat: { influence: 1 }, showFloater: 'influence', sparkOnly: true },
+    ],
   },
 
   // Actions
@@ -222,7 +235,7 @@ export default [
     civUnique: true,
     cost: { stat: 'tech', value: 10 },
     onCancel: [{ addStat: { tech: 5 } }],
-    onRemove: [
+    onDisconnect: [
       {
         queueDisc: 'discovery',
         conditionStat: { sameAsCost: true },
@@ -344,11 +357,72 @@ export default [
     skill: 'earth',
     category: 'earth',
     mana: 10,
+    influence: 5,
     desc: 'Bla bla something',
     type: 'boon',
     duration: 6,
     turnGrow: { food: 5 },
     boost: { military: 3 },
+    onConnect: [
+      {
+        addStat: { influence: 1.5 },
+        showFloater: 'influence',
+        sparkOnly: true,
+      },
+    ],
+  },
+  {
+    id: 'vitalized-soil',
+    title: 'Vitalized soil',
+    skill: 'earth',
+    category: 'earth',
+    mana: 10,
+    desc: 'Slightly increases food production.',
+    type: 'boon',
+    duration: 3,
+    rechargeTurns: 3,
+    influence: 1,
+    turnGrow: { food: 3 },
+    onConnect: [
+      {
+        addStat: { influence: 3 },
+        showFloater: 'influence',
+        sparkOnly: true,
+      },
+    ],
+  },
+  {
+    id: 'earth-avatar',
+    title: 'Earth avatar',
+    skill: 'earth2',
+    category: 'earth',
+    mana: 18,
+    influence: 20,
+    desc: 'Bla bla something',
+    type: 'boon',
+    skipLog: true,
+    duration: 3,
+    rechargeTurns: 10,
+    removeDisabled: true,
+    boost: { magic: 5 },
+    onExpire: [{ addStat: { influence: 15 }, createLog: 'statGain' }],
+  },
+  {
+    id: 'civ-transform-earth',
+    title: 'Stone children',
+    skill: 'earth3',
+    category: 'earth',
+    mana: 29,
+    chargeConnect: 3,
+    influence: 95,
+    desc:
+      'Convert a civilization into the Stone children gaining complete control over them.',
+    type: 'boon',
+    skipLog: true,
+    duration: 10,
+    removeDisabled: true,
+    boost: { magic: 5, military: 5 },
+    onExpire: [{ triggerEnding: 'civTransformEarth' }],
   },
   {
     id: 'summon-whisperer',

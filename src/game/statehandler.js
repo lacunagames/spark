@@ -5,10 +5,6 @@ class StateHandler {
     this.indexes = {};
   }
 
-  getState() {
-    return this.state;
-  }
-
   initIndexes(...types) {
     types.forEach(
       type => (this.indexes[type] = { last: -1, free: [], custom: [] })
@@ -22,7 +18,7 @@ class StateHandler {
           !this.indexes[type].free.includes(index)) ||
         this.indexes[type].custom.includes(index)
       ) {
-        console.log(
+        console.warn(
           `useIndex - ${type} error: Index ${index} is taken.`,
           this.indexes[type]
         );
@@ -57,6 +53,36 @@ class StateHandler {
   setState(newState) {
     this.state = { ...this.state, ...newState };
     this.subscribeState(newState);
+  }
+
+  _find(arrayName, id, labelsAllowed) {
+    const isIdArray = Array.isArray(id);
+    return this.state[arrayName].find(
+      item =>
+        (isIdArray
+          ? id.includes(item.id ?? item.index)
+          : item.id === id ||
+            ({}.hasOwnProperty.call(item, 'index') && item.index === id)) ||
+        (labelsAllowed &&
+          (isIdArray
+            ? id.find(idFind => item.labels?.includes(idFind))
+            : item.labels?.includes(id)))
+    );
+  }
+
+  _updateStateKey(objName, key, newVal) {
+    const stateObj = {
+      ...this.state[objName],
+      [key]: newVal,
+    };
+    this.setState({ [objName]: stateObj });
+    return stateObj;
+  }
+
+  _removeStateKey(objName, key) {
+    const removedKeyObj = { ...this.state[objName] };
+    delete removedKeyObj[key];
+    this.setState({ [objName]: removedKeyObj });
   }
 
   _updateStateObj(arrayName, id, updates) {

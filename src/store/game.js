@@ -12,14 +12,14 @@ const mutations = {};
 let timer;
 let unsavedState = {};
 
-Vue.prototype.gameAction = (action, ...args) => {
+Vue.prototype.gameCall = (action, ...args) => {
   if (
     action[0] === '_' ||
     ['constructor', 'subscribeState'].indexOf(action) !== -1
   )
     return false;
 
-  const moduleName = Object.keys(modules).find(
+  let moduleName = Object.keys(modules).find(
     moduleName => typeof modules[moduleName][action] === 'function'
   );
 

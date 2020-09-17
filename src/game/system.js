@@ -58,7 +58,7 @@ class System extends StateHandler {
 
     this.state = {};
     this.setState(defaultState);
-    this.initIndexes('msg', 'floater');
+    this._initIndexes('msg', 'floater');
     this.floaterQueue = [];
     this.floaterTimer;
     this.floating = false;
@@ -70,7 +70,7 @@ class System extends StateHandler {
     }
     const newMessage = {
       ...(messageTypes[type] || messageTypes.default),
-      index: this.useIndex('msg'),
+      index: this._useIndex('msg'),
     };
     const isErr = newMessage.type === 'error';
 
@@ -99,7 +99,7 @@ class System extends StateHandler {
         : this.state.messages.find(msg => msg.index === index);
 
     if (!message) return;
-    this.clearIndex('msg', index);
+    this._clearIndex('msg', index);
     clearTimeout(message.timer);
     if (message.type === 'error') {
       this.setState({ errorMessage: undefined });
@@ -121,7 +121,7 @@ class System extends StateHandler {
         clearInterval(this.floaterTimer);
         return;
       }
-      const index = this.useIndex('floater');
+      const index = this._useIndex('floater');
       this.setState({
         floaters: [
           ...this.state.floaters,
@@ -129,7 +129,7 @@ class System extends StateHandler {
             index,
             ...this.floaterQueue[0],
             timer: setTimeout(() => {
-              this.clearIndex('floater', index);
+              this._clearIndex('floater', index);
               this._removeStateObj('floaters', index);
             }, 2000),
           },

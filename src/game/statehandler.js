@@ -1,3 +1,5 @@
+import utils from '@/game/utils';
+
 class StateHandler {
   constructor(subscribeState) {
     this.subscribeState = subscribeState;
@@ -5,21 +7,30 @@ class StateHandler {
     this.indexes = {};
   }
 
-  initIndexes(...types) {
+  _initIndexes(...types) {
     types.forEach(
-      type => (this.indexes[type] = { last: -1, free: [], custom: [] })
+      type =>
+        (this.indexes[type] = {
+          last: -1,
+          free: [],
+          custom: [],
+          lastRemoved: undefined,
+        })
     );
   }
 
-  useIndex(type, isUpgrade, index) {
-    if (index !== undefined) {
+  _useIndex(type, isUpgrade, index) {
+    if (isUpgrade) {
+      index = this.indexes[type].lastRemoved;
+    }
+    if (typeof index === 'number') {
       if (
         (this.indexes[type].last >= index &&
           !this.indexes[type].free.includes(index)) ||
         this.indexes[type].custom.includes(index)
       ) {
         console.warn(
-          `useIndex - ${type} error: Index ${index} is taken.`,
+          `_useIndex - ${type} error: Index ${index} is taken.`,
           this.indexes[type]
         );
       } else {
@@ -31,7 +42,7 @@ class StateHandler {
       }
     }
     if (this.indexes[type].free.length) {
-      return this.indexes[type].free[isUpgrade ? 'pop' : 'shift']();
+      return this.indexes[type].free.shift();
     } else {
       do {
         this.indexes[type].last++;
@@ -40,13 +51,13 @@ class StateHandler {
     }
   }
 
-  clearIndex(type, index) {
-    if (this.indexes[type].custom.includes(index)) {
-      this.indexes[type].custom.splice(
-        this.indexes[type].custom.indexOf(index)
-      );
+  _clearIndex(type, index) {
+    const indexType = this.indexes[type];
+    indexType.lastRemoved = index;
+    if (indexType.custom.includes(index)) {
+      indexType.custom = indexType.custom.filter(ix => ix !== index);
     } else {
-      this.indexes[type].free.push(index);
+      indexType.free.push(index);
     }
   }
 
@@ -56,18 +67,7 @@ class StateHandler {
   }
 
   _find(arrayName, id, labelsAllowed) {
-    const isIdArray = Array.isArray(id);
-    return this.state[arrayName].find(
-      item =>
-        (isIdArray
-          ? id.includes(item.id ?? item.index)
-          : item.id === id ||
-            ({}.hasOwnProperty.call(item, 'index') && item.index === id)) ||
-        (labelsAllowed &&
-          (isIdArray
-            ? id.find(idFind => item.labels?.includes(idFind))
-            : item.labels?.includes(id)))
-    );
+    return utils.findInArray(this.state[arrayName], id, labelsAllowed);
   }
 
   _updateStateKey(objName, key, newVal) {

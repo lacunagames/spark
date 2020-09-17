@@ -54,7 +54,7 @@ class Civs extends StateHandler {
 
     this.state = {};
     this.setState(defaultState);
-    this.initIndexes('civList');
+    this._initIndexes('civList');
   }
 
   initCivs() {
@@ -94,7 +94,7 @@ class Civs extends StateHandler {
           ),
           ...civ,
           level: 1,
-          index: this.useIndex('civList'),
+          index: this._useIndex('civList'),
           influenceDecay: 0.01,
           connect: [],
           popLog: [
@@ -105,13 +105,11 @@ class Civs extends StateHandler {
       ],
     });
     this.world.logEvent({ type: 'civCreated', civId });
-    this.world.createDisc(utils.randomEl(civ.biomes), { targetIds: civId });
+    this.world.createDisc(utils.randomEl(civ.biomes), civId);
     [...civ.startingTechs, 'code-of-laws'].forEach(techId =>
-      this.world.createDisc(techId, { targetIds: civId })
+      this.world.createDisc(techId, civId)
     );
-    civ.startingBoons.forEach(boonId =>
-      this.world.createDisc(boonId, { targetIds: civId })
-    );
+    civ.startingBoons.forEach(boonId => this.world.createDisc(boonId, civId));
     this.world.executeActions({
       actions: [
         { queueAction: 'war' },
@@ -143,7 +141,7 @@ class Civs extends StateHandler {
     });
     this.world.checkDiscRemove();
     this.world.removeQueueItems({ civId, skipActions: true });
-    this.clearIndex('civList', civ?.index);
+    this._clearIndex('civList', civ?.index);
     this._removeStateObj('civList', civId);
     if (this.state.civList.length === 0) {
       this.world.executeActions({ actions: [{ triggerEnding: 'extinction' }] });

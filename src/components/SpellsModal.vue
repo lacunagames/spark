@@ -49,6 +49,7 @@
 </template>
 
 <script>
+import utils from '@/game/utils';
 import Modal from '@/components/Modal';
 import SpellDetails from '@/components/SpellDetails';
 
@@ -89,8 +90,9 @@ export default {
     filteredSpells() {
       return this.$store.getters.spark.spells
         .filter(spell => {
-          const isActive = this.$store.getters.world.discs.find(
-            disc => disc.id === spell.id
+          const isActive = utils.findInArray(
+            this.$store.getters.world.discs,
+            spell.id
           );
           return (
             !['knowledge'].includes(spell.type) &&
@@ -99,19 +101,21 @@ export default {
               spell.category === this.selectedSpellTab) &&
             !spell.isHidden &&
             (!spell.skillCreate ||
-              this.$store.getters.spark.skills.find(
-                skill => skill.id === spell.skillCreate
+              utils.findInArray(
+                this.$store.getters.spark.skills,
+                spell.skillCreate
               ).isActive ||
               isActive) &&
             (((!spell.upgrades || isActive) &&
-              !this.gameAction('getDiscUpgrade', spell.id)) ||
+              !this.gameCall('getDiscUpgrade', spell.id)) ||
               ['boon', 'spell'].includes(spell.type))
           );
         })
         .map(spell => ({
           ...spell,
-          isActive: !!this.$store.getters.world.discs.find(
-            disc => disc.id === spell.id
+          isActive: !!utils.findInArray(
+            this.$store.getters.world.discs,
+            spell.id
           ),
         }));
     },
@@ -134,8 +138,9 @@ export default {
       this.selectedSpellTab = id;
     },
     selectSpell(id) {
-      this.selectedSpell = this.$store.getters.spark.spells.find(
-        spell => spell.id === id
+      this.selectedSpell = utils.findInArray(
+        this.$store.getters.spark.spells,
+        id
       );
     },
   },

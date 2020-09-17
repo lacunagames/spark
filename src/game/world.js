@@ -102,7 +102,7 @@ class World extends StateHandler {
 
     this.state = {};
     this.setState(defaultState);
-    this.initIndexes('world', 'knowledge', 'boon');
+    this._initIndexes('world', 'knowledge', 'boon');
     setTimeout(() => this.initWorld());
   }
 
@@ -127,16 +127,10 @@ class World extends StateHandler {
 
   getClosestWorldIndex(index) {
     const civIndex = typeof index === 'string' && +index.split('civ-')[1];
-    const pos = {
-      left:
-        typeof civIndex === 'number' && civIndex > -1
-          ? this.civs.state.positions[civIndex].left
-          : this.state.positions[index].left,
-      top:
-        typeof civIndex === 'number' && civIndex > -1
-          ? this.civs.state.positions[civIndex].top
-          : this.state.positions[index].top,
-    };
+    const pos =
+      typeof civIndex === 'number' && civIndex > -1
+        ? this.civs.state.positions[civIndex]
+        : this.state.positions[index];
     let closestIndex = 0;
     let distance = 1000;
 
@@ -147,9 +141,7 @@ class World extends StateHandler {
           disc => !['knowledge', 'boon'].includes(disc.type) && disc.index === i
         )
       ) {
-        const newDistance = getDistance(pos, {
-          ...this.state.positions[i],
-        });
+        const newDistance = getDistance(pos, this.state.positions[i]);
         if (newDistance < distance) {
           distance = newDistance;
           closestIndex = i;
@@ -157,6 +149,34 @@ class World extends StateHandler {
       }
     }
     return closestIndex;
+  }
+
+  getFurthestWorldIndex() {
+    let furthestIndex = 0;
+    let distance = 0;
+    this.state.positions.forEach((pos, index) => {
+      if (
+        !this.state.discs.find(
+          disc =>
+            disc.index === index && !['knowledge', 'boon'].includes(disc.type)
+        )
+      ) {
+        let closestDist = 1000;
+        this.state.discs.forEach(disc => {
+          if (!['knowledge', 'boon'].includes(disc.type)) {
+            const dist = getDistance(pos, this.state.positions[disc.index]);
+            if (dist < closestDist) {
+              closestDist = dist;
+            }
+          }
+        }, 0);
+        if (closestDist > distance) {
+          distance = closestDist;
+          furthestIndex = index;
+        }
+      }
+    });
+    return furthestIndex;
   }
 
   getDiscUpgrade(discId, civId) {
@@ -338,10 +358,10 @@ class World extends StateHandler {
                 });
               }
             } else {
-              this.createDisc(actionDisc.id, {
-                targetIds: actionDisc.isGlobal ? undefined : civIds,
-                closeToIndex: disc.index,
-              });
+              this.createDisc(
+                actionDisc.id,
+                actionDisc.isGlobal ? undefined : civIds
+              );
               this.logEvent({
                 type: 'dangerAppearedVillain',
                 discId: actionDisc.id,
@@ -354,18 +374,8 @@ class World extends StateHandler {
         this._updateStateObj('discs', disc.id, { villain });
       }
 
-      // BEAST Heal / Damage
+      // DISC Damage
       if (['beast', 'force'].includes(disc.type)) {
-        if (this.state.healths[disc.id] < disc.health) {
-          const newHealth = Math.min(
-            disc.health,
-            utils.round(
-              this.state.healths[disc.id] +
-                (disc.healthRegen ?? this.state.healthRegen) * disc.health
-            )
-          );
-          this._updateStateKey('healths', disc.id, newHealth);
-        }
         disc.connect?.forEach(conn => {
           const otherDisc = this._find('discs', conn);
           [
@@ -388,6 +398,18 @@ class World extends StateHandler {
         });
       }
     });
+    this.state.discs.forEach(disc => {
+      if (this.state.healths[disc.id] < disc.health) {
+        const newHealth = Math.min(
+          disc.health,
+          utils.round(
+            this.state.healths[disc.id] +
+              (disc.healthRegen ?? this.state.healthRegen) * disc.health
+          )
+        );
+        this._updateStateKey('healths', disc.id, newHealth);
+      }
+    });
     if (this.state.turn === 1) {
       this.createDisc('god-war');
       this.logEvent({ type: 'dangerAppeared', discId: 'god-war' });
@@ -408,7 +430,7 @@ class World extends StateHandler {
         .map(disc => disc.id);
       const randomDanger = utils.randomEl(dangerDiscs);
       if (randomDanger) {
-        this.createDisc(randomDanger, { targetIds: civIds });
+        this.createDisc(randomDanger, civIds);
         this.logEvent({
           type: 'dangerAppeared',
           discId: randomDanger,
@@ -418,7 +440,7 @@ class World extends StateHandler {
     }
   }
 
-  createDisc(discId, { targetIds, closeToIndex } = {}) {
+  createDisc(discId, targetIds) {
     targetIds = Array.isArray(targetIds) ? targetIds : [targetIds];
     let returnVal, isUpgrade;
     targetIds.forEach(targetId => {
@@ -426,8 +448,7 @@ class World extends StateHandler {
         this._find('discs', discId) || this._find('allDisclike', discId);
       const civ = this.civs._find('civList', targetId);
       const target = !civ && this._find('discs', targetId);
-      closeToIndex =
-        closeToIndex ??
+      const closeToIndex =
         (disc.closeToDisc &&
           this._find('discs', disc.closeToDisc, true)?.index) ??
         (disc.closeToCiv && civ && `civ-${civ.index}`);
@@ -567,14 +588,16 @@ class World extends StateHandler {
             ...this.state.discs,
             {
               ...disc,
-              index: this.useIndex(
-                ['knowledge', 'boon'].includes(disc.type) ? disc.type : 'world',
-                isUpgrade,
-                closeToIndex !== undefined &&
-                  !['knowledge', 'boon'].includes(disc.type)
-                  ? this.getClosestWorldIndex(closeToIndex)
-                  : undefined
-              ),
+              index: ['knowledge', 'boon'].includes(disc.type)
+                ? this._useIndex(disc.type)
+                : this._useIndex(
+                    'world',
+                    isUpgrade,
+                    !isUpgrade &&
+                      (closeToIndex !== undefined
+                        ? this.getClosestWorldIndex(closeToIndex)
+                        : this.getFurthestWorldIndex())
+                  ),
             },
           ],
         });
@@ -684,7 +707,7 @@ class World extends StateHandler {
         this.disconnectDisc(discFind.id, discId);
       }
     });
-    this.clearIndex(
+    this._clearIndex(
       ['knowledge', 'boon'].includes(disc.type) ? disc.type : 'world',
       disc.index
     );
@@ -795,8 +818,7 @@ class World extends StateHandler {
             });
           }
         }
-        const discCreated =
-          discId && this.createDisc(discId, { targetIds: civId });
+        const discCreated = discId && this.createDisc(discId, civId);
         if (!action.skipLog && discCreated) {
           logOptions = {
             type: discCreated.type === 'boon' ? 'boonAdded' : 'discCreated',

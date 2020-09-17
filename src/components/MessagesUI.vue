@@ -61,14 +61,14 @@
         <li v-for="msg in messages" :key="msg.index">
           <span
             :class="msg.type"
-            @click.once="gameAction('clearMessage', msg.index)"
+            @click.once="gameCall('clearMessage', msg.index)"
             >{{ msg.text }}</span
           >
         </li>
         <li v-if="errorMessage" :key="errorMessage.index" class="system-error">
           <span
             class="error"
-            @click.once="gameAction('clearMessage', errorMessage.index)"
+            @click.once="gameCall('clearMessage', errorMessage.index)"
             >{{ errorMessage.text }}</span
           >
         </li>
@@ -102,6 +102,8 @@
 </template>
 
 <script>
+import utils from '@/game/utils';
+
 export default {
   name: 'MessagesUI',
   data() {
@@ -139,8 +141,9 @@ export default {
           return {
             ...log,
             buttonDiscs: log.buttonDiscs?.map(disc => {
-              const skill = this.$store.getters.spark.skills.find(
-                skill => skill.id === disc.skill
+              const skill = utils.findInArray(
+                this.$store.getters.spark.skills,
+                disc.skill
               );
               return {
                 ...disc,
@@ -148,7 +151,7 @@ export default {
                   disc.skill && !skill.isActive
                     ? `Requires the ${skill.title} skill.`
                     : '',
-                manaCost: this.gameAction('getManaCost', disc.id, log.civId),
+                manaCost: this.gameCall('getManaCost', disc.id, log.civId),
               };
             }),
           };
@@ -164,8 +167,8 @@ export default {
   },
   methods: {
     clickLogButton(btn, log) {
-      if (this.gameAction('castSpell', btn.id, log.civId)) {
-        this.gameAction('turnLogStatic', log.index);
+      if (this.gameCall('castSpell', btn.id, log.civId)) {
+        this.gameCall('turnLogStatic', log.index);
       }
     },
   },

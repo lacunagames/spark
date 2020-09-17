@@ -16,7 +16,7 @@ const defaultState = {
 
   mana: 10,
   maxMana: 15,
-  manaPerTurn: 3,
+  manaPerTurn: 5,
   manaRestoreMultiplier: 0,
   manaToRestore: 0,
   manaToXpMultiplier: 0.2,
@@ -382,9 +382,10 @@ class Spark extends StateHandler {
     });
 
     if (!isActive || isConnect) {
-      this.world.createDisc(discId, {
-        targetIds: upgradedTargetIds?.length ? upgradedTargetIds : targetId,
-      });
+      this.world.createDisc(
+        discId,
+        upgradedTargetIds?.length ? upgradedTargetIds : targetId
+      );
       if (!isActive && disc.onCast) {
         this.world.executeActions({
           actions: disc.onCast,

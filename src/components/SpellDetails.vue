@@ -5,6 +5,21 @@
       <span class="text">{{ spell.title }}</span>
     </h2>
     <p class="spell-desc">{{ spell.desc }}</p>
+    <p v-if="requiresList.length" class="req-list">
+      Requires:
+      <span
+        v-for="item in requiresList"
+        :key="item.id"
+        :class="{
+          'req-icon-wrap': true,
+          disabled: item.disabled,
+          missing: item.missing,
+        }"
+      >
+        <span :class="`icon icon-${item.icon || item.id}`"></span>
+        {{ item.title }}
+      </span>
+    </p>
     <p v-if="spell.influence">Influence required: {{ spell.influence }}%</p>
     <p v-if="spell.duration">
       <span v-if="!activeDisc || !spell.isGlobal">
@@ -43,7 +58,7 @@
             typeof button.rechargePercent === 'number' &&
               button.rechargePercent < 1
           "
-          :size="66"
+          :size="68"
           :width="4"
           emptyColor="222"
           fillColor="ccc"
@@ -95,6 +110,7 @@
 </template>
 
 <script>
+import utils from '@/game/utils';
 import CircleMeter from '@/components/CircleMeter';
 
 export default {
@@ -108,27 +124,51 @@ export default {
   },
   computed: {
     activeDisc() {
-      return this.$store.getters.world.discs.find(
-        disc => disc.id === this.spell?.id
-      );
+      this.$store.getters.world.discs;
+      return utils.findInArray(this.$store.getters.world.discs, this.spell?.id);
     },
     currentHealth() {
       return this.spell && this.$store.getters.world.healths[this.spell.id];
     },
     spellButtons() {
-      {
-        this.spell,
-          this.isReset,
-          this.$store.getters.spark.skills,
-          this.$store.getters.civs.civList,
-          this.$store.getters.world.discs;
+      this.spell,
+        this.isReset,
+        this.$store.getters.spark.skills,
+        this.$store.getters.civs.civList,
+        this.$store.getters.world.discs;
+      return this.gameCall('getSpellButtons', this.spell.id);
+    },
+    requiresList() {
+      if (!this.spell) {
+        return [];
       }
-      return this.gameAction('getSpellButtons', this.spell.id);
+      return [
+        ...(this.spell.requires || []),
+        ...(this.spell.createRequires || []),
+      ].map(discId => {
+        this.$store.getters.world.discs;
+        const disc = utils.findInArray(
+          this.$store.getters.world.allDisclike,
+          discId
+        );
+        const isReqActive = utils.findInArray(
+          this.$store.getters.world.discs,
+          discId,
+          true
+        );
+        return {
+          ...disc,
+          disabled:
+            (this.spell.createRequires.includes(discId) && this.activeDisc) ||
+            this.spellButtons.every(button => button.upgId || button.isActive),
+          missing: !isReqActive,
+        };
+      });
     },
   },
   methods: {
     castSpell(targetId, upgradeId) {
-      const resp = this.gameAction(
+      const resp = this.gameCall(
         'castSpell',
         upgradeId || this.spell.id,
         targetId
@@ -186,6 +226,43 @@ export default {
   .spell-desc {
     font-size: 18px;
   }
+  .req-list {
+    display: flex;
+    padding-top: 10px;
+  }
+  .req-icon-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: -10px 3px 5px;
+    font-size: 12px;
+    line-height: 12px;
+    width: 60px;
+
+    .icon {
+      display: inline-block;
+      border: 2px solid $cText;
+      margin-bottom: 5px;
+      width: 30px;
+      height: 30px;
+      border-radius: 30px;
+    }
+
+    &.missing {
+      color: $cError;
+      .icon {
+        border-color: $cError;
+      }
+    }
+    &.disabled {
+      color: #666;
+      .icon {
+        border-color: #666;
+        filter: grayscale(0.8);
+      }
+    }
+  }
   .civ-checks {
     display: flex;
     flex-wrap: wrap;
@@ -230,10 +307,9 @@ export default {
 
     .icon-wrap {
       display: inline-block;
-      overflow: hidden;
-      width: 66px;
-      height: 66px;
-      border: 3px solid #ccc;
+      width: 68px;
+      height: 68px;
+      border: 4px solid #ccc;
       border-radius: 50px;
       box-shadow: $shadow2;
       margin-bottom: 6px;
@@ -241,9 +317,11 @@ export default {
 
     .icon {
       display: inline-block;
-      width: 60px;
-      height: 60px;
+      width: 62px;
+      height: 62px;
+      margin: -1px;
       background-size: cover;
+      border-radius: 50px;
     }
     .circle-meter {
       position: absolute;

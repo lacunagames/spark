@@ -2,11 +2,11 @@
   <div class="spark">
     <div>
       <div class="turn-button">
-        <span @click.prevent="gameAction('cheatSpark')"
+        <span @click.prevent="gameCall('cheatSpark')"
           >Turn {{ world.turn }}</span
         >
         <br />
-        <button class="primary" @click="gameAction('nextTurn', 2)">
+        <button class="primary" @click="gameCall('nextTurn', 2)">
           Next turn
         </button>
       </div>
@@ -21,7 +21,7 @@
         </button>
         <button
           class="charges"
-          @click="gameAction('popManaCharge')"
+          @click="gameCall('popManaCharge')"
           :title="`Use charge to gain ${spark.chargeToMana} mana`"
         >
           <span v-for="index in spark.manaCharges" :key="index"></span>

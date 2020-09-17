@@ -11,6 +11,7 @@
 </template>
 
 <script>
+import utils from '@/game/utils';
 import CivsUI from '@/components/CivsUI';
 import WorldUI from '@/components/WorldUI';
 import SparkUI from '@/components/SparkUI';
@@ -58,10 +59,10 @@ export default {
     openLink(item) {
       const disc =
         item.link === 'disc' &&
-        this.$store.getters.world.discs.find(disc => disc.id === item.icon);
+        utils.findInArray(this.$store.getters.world.discs, item.icon);
       const civ =
         item.link === 'civ' &&
-        this.$store.getters.civs.civList.find(civ => civ.id === item.icon);
+        utils.findInArray(this.$store.getters.civs.civList, item.icon);
 
       switch (item.link) {
         case 'disc':
@@ -73,7 +74,7 @@ export default {
       }
     },
     updateClickPos(event) {
-      this.gameAction('setClickPos', event.clientX, event.clientY);
+      this.gameCall('setClickPos', event.clientX, event.clientY);
     },
   },
 };

@@ -28,6 +28,7 @@
           href="#"
           :class="{
             large: disc.villain || disc.type === 'biome',
+            metered: disc.isGlobal && disc.duration,
           }"
           :title="disc.title"
           v-on="hoverHandle(disc.id)"
@@ -130,8 +131,8 @@ export default {
     },
     updateSelectedDisc(discId) {
       this.selectedDisc =
-        this.$store.getters.world.discs.find(disc => disc.id === discId) ||
-        this.$store.getters.world.allDisclike.find(disc => disc.id === discId);
+        utils.findInArray(this.$store.getters.world.discs, discId) ||
+        utils.findInArray(this.$store.getters.world.allDisclike, discId);
     },
   },
 };
@@ -174,6 +175,19 @@ export default {
       top: -25px;
       transition: box-shadow $animFast;
 
+      &:not(.metered):after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        margin: -2px;
+        border: 2.5px solid #666;
+        border-radius: 100px;
+        box-sizing: border-box;
+        width: 50px;
+        height: 50px;
+      }
+
       .background {
         overflow: hidden;
         border-radius: 30px;
@@ -209,15 +223,12 @@ export default {
         height: 60px;
         left: -30px;
         top: -30px;
+
+        &:after {
+          width: 60px;
+          height: 60px;
+        }
       }
-    }
-
-    .biome a {
-      border-color: #1c791c;
-    }
-
-    .knowledge a {
-      border-color: #2121c5;
     }
   }
 }

@@ -40,7 +40,7 @@
         >
           <button
             :title="skill.title"
-            @click.prevent="gameAction('learnSkill', skill.id)"
+            @click.prevent="gameCall('learnSkill', skill.id)"
             :class="{
               active: skill.isActive,
               minor: skill.minor,
@@ -48,7 +48,7 @@
             }"
             :disabled="false"
           >
-            <span :class="[`icon-${skill.icon || skill.id}`]"></span>
+            <span :class="[`icon icon-${skill.icon || skill.id}`]"></span>
           </button>
         </li>
       </ul>
@@ -176,34 +176,35 @@ export default {
       left: -20px;
       top: -20px;
       font-size: 1px;
-      box-shadow: $shadow1;
-      overflow: hidden;
-      border: 2px solid #555;
-      transition: border-color $animFast;
       z-index: 2;
-      border-radius: 10px;
+      background: none;
+      box-shadow: none;
 
       span {
         background-size: cover;
         display: block;
         height: 100%;
         transition: filter $animFast;
+        transition: border-color $animFast, filter $animFast;
+        border: 2px solid #555;
+        border-radius: 10px;
+        box-shadow: $shadow1;
+        filter: grayscale(0);
       }
       &.minor {
-        border-radius: 30px;
         width: 30px;
         height: 30px;
         margin: 5px 0 0 5px;
-      }
 
-      &.active {
+        span {
+          border-radius: 30px;
+        }
+      }
+      &.active span {
         border-color: #25d625;
       }
-      &.disabled {
-        border-color: #aaa;
-        span {
-          filter: grayscale(0.8);
-        }
+      &.disabled span {
+        filter: grayscale(0.8);
       }
     }
   }

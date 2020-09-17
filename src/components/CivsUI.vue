@@ -133,7 +133,7 @@
                       type="button"
                       class="close remove-boon"
                       title="Remove boon"
-                      @click="gameAction('modifyDisc', item.id, selectedCiv.id)"
+                      @click="gameCall('modifyDisc', item.id, selectedCiv.id)"
                     >
                       <span class="mana mana-circle-before">{{
                         item.removeCost.mana
@@ -188,6 +188,7 @@
 </template>
 
 <script>
+import utils from '@/game/utils';
 import CircleMeter from '@/components/CircleMeter';
 import Modal from '@/components/Modal';
 import Graph from '@/components/Graph';
@@ -223,8 +224,9 @@ export default {
       return this.$store.getters.civs;
     },
     boonList() {
-      const civ = this.$store.getters.civs.civList.find(
-        civ => civ.id === this.selectedCiv?.id
+      const civ = utils.findInArray(
+        this.$store.getters.civs.civList,
+        this.selectedCiv?.id
       );
       if (!civ) return [];
       return this.$store.getters.world.discs
@@ -237,14 +239,13 @@ export default {
         .map(disc => {
           const hasRemove =
             !disc.removeDisabled &&
-            !!this.$store.getters.spark.skills.find(
-              skill => skill.isActive && skill.id === disc.skill
-            );
+            !!utils.findInArray(this.$store.getters.spark.skills, disc.skill)
+              ?.isActive;
           return {
             ...disc,
             civDuration: disc.durations?.[this.selectedCiv.id],
             hasRemove,
-            removeCost: this.gameAction(
+            removeCost: this.gameCall(
               'getManaCost',
               disc.id,
               this.selectedCiv.id
@@ -253,15 +254,14 @@ export default {
         });
     },
     techList() {
-      const civ = this.$store.getters.civs.civList.find(
-        civ => civ.id === this.selectedCiv?.id
+      const civ = utils.findInArray(
+        this.$store.getters.civs.civList,
+        this.selectedCiv?.id
       );
       if (!civ) return [];
       return civ.connect
         .map(discId =>
-          this.$store.getters.world.discs.find(
-            findDisc => findDisc.id === discId
-          )
+          utils.findInArray(this.$store.getters.world.discs, discId)
         )
         .filter(disc => disc.type === 'knowledge' && !disc.isHidden)
         .reverse();
@@ -275,7 +275,10 @@ export default {
         const civPos = civs.positions[civ.index];
 
         civ.connect?.forEach(discId => {
-          const disc = world.discs.find(disc => disc.id === discId);
+          const disc = utils.findInArray(
+            this.$store.getters.world.discs,
+            discId
+          );
 
           if (['knowledge', 'boon'].includes(disc.type)) return;
           connections.push({
@@ -333,7 +336,7 @@ export default {
       {
         this.$store.getters.world.log; // to trigger value update on log change
       }
-      return this.gameAction('getFilteredLog', {
+      return this.gameCall('getFilteredLog', {
         civId: this.selectedCiv.id,
         order: 'desc',
         insertTurn: true,
@@ -342,8 +345,10 @@ export default {
   },
   watch: {
     boonList() {
-      this.selectedCiv = this.$store.getters.civs.civList.find(
-        civ => civ.id === this.selectedCiv?.id
+      this.selectedCiv = this.gameCall(
+        'findCivs',
+        'civList',
+        this.selectedCiv?.id
       );
     },
   },

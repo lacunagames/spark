@@ -16,6 +16,21 @@ const utils = {
     const [min, max] = str.replace(/\s/g, '').split('-');
     return Math.floor(Math.random() * (+max - +min + 1)) + +min;
   },
+
+  findInArray(array, id, labelsAllowed) {
+    const isIdArray = Array.isArray(id);
+    return array.find(
+      item =>
+        (isIdArray
+          ? id.includes(item.id ?? item.index)
+          : item.id === id ||
+            ({}.hasOwnProperty.call(item, 'index') && item.index === id)) ||
+        (labelsAllowed &&
+          (isIdArray
+            ? id.find(idFind => item.labels?.includes(idFind))
+            : item.labels?.includes(id)))
+    );
+  },
 };
 
 export default utils;
